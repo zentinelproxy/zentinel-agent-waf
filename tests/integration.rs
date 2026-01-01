@@ -5,8 +5,8 @@
 
 use base64::Engine;
 use sentinel_agent_protocol::{
-    AgentClient, AgentServer, Decision, EventType, RequestBodyChunkEvent, RequestHeadersEvent,
-    RequestMetadata, ResponseBodyChunkEvent,
+    AgentClient, AgentServer, ConfigureEvent, Decision, EventType, RequestBodyChunkEvent,
+    RequestHeadersEvent, RequestMetadata, ResponseBodyChunkEvent,
 };
 use sentinel_agent_waf::{WafAgent, WafConfig};
 use std::collections::HashMap;
@@ -707,4 +707,285 @@ async fn test_paranoia_level_1_ignores_comments() {
         .expect("Failed to send event");
 
     assert!(is_allow(&response.decision), "Expected Allow decision");
+}
+
+// ============================================================================
+// Configure Event Tests (Config Block)
+// ============================================================================
+
+/// Helper function to create a ConfigureEvent
+fn make_configure_event(config_json: serde_json::Value) -> ConfigureEvent {
+    ConfigureEvent {
+        agent_id: "test-waf".to_string(),
+        config: config_json,
+    }
+}
+
+#[tokio::test]
+async fn test_configure_event_applies_paranoia_level() {
+    // Start with default config (paranoia level 1)
+    let config = WafConfig::default();
+    let (_dir, socket_path) = start_test_server(config).await;
+    let mut client = create_client(&socket_path).await;
+
+    // First verify SQL comment is allowed at paranoia level 1
+    let event = make_request_headers("/api?q=admin--", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(is_allow(&response.decision), "Expected Allow at paranoia 1");
+
+    // Send configure event to increase paranoia level to 2
+    let config_event = make_configure_event(serde_json::json!({
+        "paranoia-level": 2
+    }));
+    let response = client
+        .send_event(EventType::Configure, &config_event)
+        .await
+        .expect("Failed to send configure event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for valid config"
+    );
+
+    // Now SQL comment should be blocked at paranoia level 2
+    let event = make_request_headers("/api?q=admin--", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(is_block(&response.decision), "Expected Block at paranoia 2");
+}
+
+#[tokio::test]
+async fn test_configure_event_disables_sqli() {
+    // Start with default config (SQLi enabled)
+    let config = WafConfig::default();
+    let (_dir, socket_path) = start_test_server(config).await;
+    let mut client = create_client(&socket_path).await;
+
+    // First verify SQLi is blocked
+    let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_block(&response.decision),
+        "Expected Block with SQLi enabled"
+    );
+
+    // Send configure event to disable SQLi
+    let config_event = make_configure_event(serde_json::json!({
+        "sqli": false
+    }));
+    let response = client
+        .send_event(EventType::Configure, &config_event)
+        .await
+        .expect("Failed to send configure event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for valid config"
+    );
+
+    // Now SQLi should be allowed
+    let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow with SQLi disabled"
+    );
+}
+
+#[tokio::test]
+async fn test_configure_event_sets_detect_only_mode() {
+    // Start with default config (block mode)
+    let config = WafConfig::default();
+    let (_dir, socket_path) = start_test_server(config).await;
+    let mut client = create_client(&socket_path).await;
+
+    // First verify XSS is blocked
+    let event = make_request_headers("/page?x=<script>alert(1)</script>", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(is_block(&response.decision), "Expected Block in block mode");
+
+    // Send configure event to set detect-only mode
+    let config_event = make_configure_event(serde_json::json!({
+        "block-mode": false
+    }));
+    let response = client
+        .send_event(EventType::Configure, &config_event)
+        .await
+        .expect("Failed to send configure event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for valid config"
+    );
+
+    // Now XSS should be detected but allowed
+    let event = make_request_headers("/page?x=<script>alert(1)</script>", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow in detect-only mode"
+    );
+
+    // Verify detection header is present
+    let has_waf_detected = response.request_headers.iter().any(|h| match h {
+        sentinel_agent_protocol::HeaderOp::Set { name, .. } => name == "X-WAF-Detected",
+        _ => false,
+    });
+    assert!(has_waf_detected, "Expected X-WAF-Detected header");
+}
+
+#[tokio::test]
+async fn test_configure_event_sets_exclude_paths() {
+    // Start with default config (no exclusions)
+    let config = WafConfig::default();
+    let (_dir, socket_path) = start_test_server(config).await;
+    let mut client = create_client(&socket_path).await;
+
+    // First verify /health is blocked with SQLi
+    let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_block(&response.decision),
+        "Expected Block without exclusions"
+    );
+
+    // Send configure event to exclude /health
+    let config_event = make_configure_event(serde_json::json!({
+        "exclude-paths": ["/health", "/metrics"]
+    }));
+    let response = client
+        .send_event(EventType::Configure, &config_event)
+        .await
+        .expect("Failed to send configure event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for valid config"
+    );
+
+    // Now /health should be excluded
+    let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for excluded path"
+    );
+
+    // But /api should still be blocked
+    let event = make_request_headers("/api?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_block(&response.decision),
+        "Expected Block for non-excluded path"
+    );
+}
+
+#[tokio::test]
+async fn test_configure_event_full_config() {
+    // Start with default config
+    let config = WafConfig::default();
+    let (_dir, socket_path) = start_test_server(config).await;
+    let mut client = create_client(&socket_path).await;
+
+    // Send full configuration via configure event
+    let config_event = make_configure_event(serde_json::json!({
+        "paranoia-level": 2,
+        "sqli": true,
+        "xss": true,
+        "path-traversal": true,
+        "command-injection": true,
+        "protocol": true,
+        "block-mode": true,
+        "exclude-paths": ["/health"],
+        "body-inspection": true,
+        "max-body-size": 1048576,
+        "response-inspection": false
+    }));
+    let response = client
+        .send_event(EventType::Configure, &config_event)
+        .await
+        .expect("Failed to send configure event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for valid config"
+    );
+
+    // Verify paranoia level 2 is active (SQL comment blocked)
+    let event = make_request_headers("/api?q=admin--", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_block(&response.decision),
+        "Expected Block with paranoia 2"
+    );
+
+    // Verify exclusion is active
+    let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for excluded path"
+    );
+}
+
+#[tokio::test]
+async fn test_configure_event_with_empty_config() {
+    // Start with custom config
+    let config = WafConfig {
+        paranoia_level: 3,
+        sqli_enabled: false,
+        ..Default::default()
+    };
+    let (_dir, socket_path) = start_test_server(config).await;
+    let mut client = create_client(&socket_path).await;
+
+    // Send empty config - should use defaults
+    let config_event = make_configure_event(serde_json::json!({}));
+    let response = client
+        .send_event(EventType::Configure, &config_event)
+        .await
+        .expect("Failed to send configure event");
+    assert!(
+        is_allow(&response.decision),
+        "Expected Allow for empty config"
+    );
+
+    // Defaults: paranoia_level=1, sqli=true, block_mode=true
+    // SQLi should now be blocked (was disabled before reconfigure)
+    let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
+    let response = client
+        .send_event(EventType::RequestHeaders, &event)
+        .await
+        .expect("Failed to send event");
+    assert!(
+        is_block(&response.decision),
+        "Expected Block after reset to defaults"
+    );
 }
