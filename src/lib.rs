@@ -560,7 +560,7 @@ impl AgentHandler for WafAgent {
         debug!(config = ?event.config, "Configuration content");
 
         // Parse the JSON config
-        let json_config: WafConfigJson = match serde_json::from_value(event.config) {
+        let json_config: WafConfigJson = match serde_json::from_value::<WafConfigJson>(event.config.clone()) {
             Ok(c) => c,
             Err(e) => {
                 warn!(error = %e, "Failed to parse WAF configuration");
