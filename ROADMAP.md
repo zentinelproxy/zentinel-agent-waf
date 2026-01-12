@@ -1,6 +1,6 @@
 # Roadmap
 
-## Current Status (v0.6.0)
+## Current Status (v0.7.0)
 
 The WAF agent has evolved into a **next-generation Web Application and API Protection (WAAP)** platform with ML-powered detection, anomaly scoring, and enterprise-grade features.
 
@@ -156,16 +156,20 @@ Added WebSocket frame inspection for detecting attacks in WebSocket traffic.
 
 ---
 
+### v0.7.0 - CI/CD & Quality ✓
+
+**Status: Complete (Disabled)**
+
+GitHub Actions workflows added but disabled to conserve minutes. Change `if: false` to `if: true` in workflow files to enable.
+
+- [x] Add GitHub Actions CI workflow (check, test, fmt, clippy)
+- [x] Automated testing on PR (disabled)
+- [x] Code coverage reporting (cargo-llvm-cov, Codecov)
+- [x] Automated releases (multi-platform builds, crates.io publish)
+
+---
+
 ## Upcoming Roadmap
-
-### v0.7.0 - CI/CD & Quality
-
-**Priority: High**
-
-- [ ] Add GitHub Actions CI workflow
-- [ ] Automated testing on PR
-- [ ] Code coverage reporting
-- [ ] Automated releases
 
 ### v0.8.0 - Paranoia Level Rules
 
