@@ -153,6 +153,11 @@ impl WafEngine {
         &self.rules
     }
 
+    /// Get the number of active rules
+    pub fn rule_count(&self) -> usize {
+        self.rules.len()
+    }
+
     /// Check a value against all applicable rules for a location
     ///
     /// Uses automata-based multi-pattern matching when available for O(n) input

@@ -342,29 +342,82 @@ mod paranoia_levels {
         assert!(has_detection(&detections), "PL1 should detect basic SQLi");
     }
 
-    // Higher paranoia levels require additional rule implementation
     #[test]
-    #[ignore = "Requires paranoia level 2 specific rules"]
     fn test_paranoia_level_2() {
         let engine = create_paranoid_engine(2);
-        let detections = engine.check("select from", "query");
-        assert!(has_detection(&detections), "PL2 should catch SQL keywords");
+        // PL2 detects environment variable patterns
+        let detections = engine.check("${PATH}", "query");
+        assert!(has_detection(&detections), "PL2 should catch env var patterns");
     }
 
     #[test]
-    #[ignore = "Requires paranoia level 3 specific rules"]
-    fn test_paranoia_level_3() {
+    fn test_paranoia_level_3_xss_evasion() {
         let engine = create_paranoid_engine(3);
-        let detections = engine.check("<script", "query");
-        assert!(has_detection(&detections), "PL3 should catch partial tags");
+        // PL3 catches null byte obfuscation
+        let detections = engine.check("scr\x00ipt", "query");
+        assert!(has_detection(&detections), "PL3 should catch null byte XSS evasion");
     }
 
     #[test]
-    #[ignore = "Requires paranoia level 4 specific rules"]
-    fn test_paranoia_level_4() {
+    fn test_paranoia_level_3_cmdi_evasion() {
+        let engine = create_paranoid_engine(3);
+        // PL3 catches $IFS bypass
+        let detections = engine.check("cat$IFS/etc/passwd", "query");
+        assert!(has_detection(&detections), "PL3 should catch $IFS bypass");
+    }
+
+    #[test]
+    fn test_paranoia_level_4_xss() {
         let engine = create_paranoid_engine(4);
-        let detections = engine.check("'test", "query");
-        assert!(has_detection(&detections), "PL4 should catch single quotes");
+        // PL4 catches any angle bracket with letter
+        let detections = engine.check("<a", "query");
+        assert!(has_detection(&detections), "PL4 should catch any angle bracket");
+    }
+
+    #[test]
+    fn test_paranoia_level_4_cmdi() {
+        let engine = create_paranoid_engine(4);
+        // PL4 catches any pipe character
+        let detections = engine.check("hello|world", "query");
+        assert!(has_detection(&detections), "PL4 should catch any pipe");
+    }
+
+    #[test]
+    fn test_paranoia_level_4_traversal() {
+        let engine = create_paranoid_engine(4);
+        // PL4 catches any double dot
+        let detections = engine.check("file..txt", "query");
+        assert!(has_detection(&detections), "PL4 should catch any double dot");
+    }
+
+    #[test]
+    fn test_paranoia_level_4_ssti() {
+        let engine = create_paranoid_engine(4);
+        // PL4 catches any double brace
+        let detections = engine.check("Hello {{ name }}", "query");
+        assert!(has_detection(&detections), "PL4 should catch any double brace");
+    }
+
+    #[test]
+    fn test_paranoia_level_increasing_rules() {
+        // Verify that higher paranoia levels include more rules
+        let engine1 = create_paranoid_engine(1);
+        let engine2 = create_paranoid_engine(2);
+        let engine3 = create_paranoid_engine(3);
+        let engine4 = create_paranoid_engine(4);
+
+        let count1 = engine1.rule_count();
+        let count2 = engine2.rule_count();
+        let count3 = engine3.rule_count();
+        let count4 = engine4.rule_count();
+
+        assert!(count2 >= count1, "PL2 should have >= rules than PL1: {} vs {}", count2, count1);
+        assert!(count3 >= count2, "PL3 should have >= rules than PL2: {} vs {}", count3, count2);
+        assert!(count4 >= count3, "PL4 should have >= rules than PL3: {} vs {}", count4, count3);
+
+        // Check we have meaningful coverage at each level
+        assert!(count1 >= 140, "PL1 should have at least 140 rules, got {}", count1);
+        assert!(count4 >= 280, "PL4 should have at least 280 rules, got {}", count4);
     }
 }
 

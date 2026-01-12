@@ -415,6 +415,254 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-test"])
             .build()?,
+
+        // =================================================================
+        // Paranoia Level 3 Rules (Low Confidence)
+        // =================================================================
+
+        RuleBuilder::new(941180, "XSS: Null byte obfuscation")
+            .description("Detects null byte in script-related content")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)(scr\x00ipt|java\x00script|on\x00error)")
+            .base_score(5)
+            .cwe(79)
+            .tags(&["xss", "xss-evasion", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941181, "XSS: Tab/newline obfuscation")
+            .description("Detects tab/newline obfuscation in script tags")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)<[\t\n\r]*script")
+            .base_score(5)
+            .cwe(79)
+            .tags(&["xss", "xss-evasion", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941182, "XSS: Backtick template literals")
+            .description("Detects template literal code execution")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"`[^`]*\$\{[^}]+\}[^`]*`")
+            .base_score(4)
+            .cwe(79)
+            .tags(&["xss", "xss-dom", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941183, "XSS: Constructor property access")
+            .description("Detects constructor.constructor pattern")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)constructor\s*[\[(]")
+            .base_score(5)
+            .cwe(79)
+            .tags(&["xss", "xss-dom", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941184, "XSS: Proto pollution")
+            .description("Detects __proto__ manipulation")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)(__proto__|prototype\s*\[)")
+            .base_score(5)
+            .cwe(79)
+            .tags(&["xss", "xss-dom", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941185, "XSS: atob/btoa functions")
+            .description("Detects base64 encode/decode for obfuscation")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)\b(atob|btoa)\s*\(")
+            .base_score(3)
+            .cwe(79)
+            .tags(&["xss", "xss-evasion", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941186, "XSS: fromCharCode")
+            .description("Detects String.fromCharCode for obfuscation")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)fromCharCode\s*\(")
+            .base_score(4)
+            .cwe(79)
+            .tags(&["xss", "xss-evasion", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941187, "XSS: Less common event handlers")
+            .description("Detects obscure event handlers")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)\b(onanimation|ontransition|onpointer|onwheel|ondrag|onscroll)\w*\s*=")
+            .base_score(4)
+            .cwe(79)
+            .tags(&["xss", "xss-event", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941188, "XSS: SVG animate/set elements")
+            .description("Detects SVG animation-based XSS")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Medium)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)<(animate|set|use)[^>]+(href|xlink)")
+            .base_score(5)
+            .cwe(79)
+            .tags(&["xss", "xss-svg", "pl3"])
+            .build()?,
+
+        RuleBuilder::new(941189, "XSS: Document/window/location access")
+            .description("Detects potentially dangerous object access")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(3)
+            .pattern(r"(?i)(document|window|location)\s*\[")
+            .base_score(3)
+            .cwe(79)
+            .tags(&["xss", "xss-dom", "pl3"])
+            .build()?,
+
+        // =================================================================
+        // Paranoia Level 4 Rules (Maximum Sensitivity)
+        // =================================================================
+
+        RuleBuilder::new(941190, "XSS: Any angle bracket")
+            .description("Detects any HTML tag-like pattern")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"<[a-zA-Z]")
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-generic", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941191, "XSS: Closing angle bracket after equals")
+            .description("Detects attribute injection patterns")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r#"=\s*["']?[^"'>\s]*>"#)
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-generic", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941192, "XSS: Script-like word")
+            .description("Detects script-related keywords anywhere")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"(?i)(script|javascript|vbscript|expression)")
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-generic", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941193, "XSS: Parentheses after word")
+            .description("Detects function-call-like patterns")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"[a-zA-Z_]\w*\s*\(")
+            .base_score(1)
+            .cwe(79)
+            .tags(&["xss", "xss-generic", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941194, "XSS: Encoded angle bracket")
+            .description("Detects any encoded angle bracket")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"(%3c|%3e|&lt|&gt|&#60|&#62|&#x3c|&#x3e)")
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-encoded", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941195, "XSS: On-prefix word")
+            .description("Detects any word starting with 'on'")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"(?i)\bon[a-z]+\s*=")
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-event", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941196, "XSS: Colon after protocol-like word")
+            .description("Detects potential URI schemes")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"(?i)(java|vb|live)script\s*:")
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-uri", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941197, "XSS: Quote followed by event")
+            .description("Detects attribute breakout attempts")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r#"["']\s*\bon"#)
+            .base_score(2)
+            .cwe(79)
+            .tags(&["xss", "xss-evasion", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941198, "XSS: Ampersand hash sequence")
+            .description("Detects numeric character references")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"&#\d+;")
+            .base_score(1)
+            .cwe(79)
+            .tags(&["xss", "xss-encoded", "pl4"])
+            .build()?,
+
+        RuleBuilder::new(941199, "XSS: SVG/Math namespace")
+            .description("Detects SVG or math content")
+            .attack_type(AttackType::Xss)
+            .severity(Severity::Low)
+            .confidence(Confidence::Low)
+            .paranoia(4)
+            .pattern(r"(?i)(svg|math)")
+            .base_score(1)
+            .cwe(79)
+            .tags(&["xss", "xss-tag", "pl4"])
+            .build()?,
     ];
 
     // Filter by paranoia level

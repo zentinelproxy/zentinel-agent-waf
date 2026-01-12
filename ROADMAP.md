@@ -1,12 +1,12 @@
 # Roadmap
 
-## Current Status (v0.7.0)
+## Current Status (v0.8.0)
 
 The WAF agent has evolved into a **next-generation Web Application and API Protection (WAAP)** platform with ML-powered detection, anomaly scoring, and enterprise-grade features.
 
 ### What Works
 
-**Core Detection (200+ Rules)**
+**Core Detection (285 Rules)**
 - SQL injection (UNION, blind, time-based, stacked, NoSQL)
 - Cross-site scripting (reflected, stored, DOM-based, polyglot)
 - Path traversal and file inclusion (LFI/RFI)
@@ -49,7 +49,7 @@ The WAF agent has evolved into a **next-generation Web Application and API Prote
 **Operational**
 - Request and response body inspection
 - WebSocket frame inspection (text/binary, fragmented messages)
-- Paranoia levels 1-4
+- Full paranoia levels 1-4 with 285 rules (P1: 147, P2: 50, P3: 48, P4: 40)
 - Block mode and detect-only mode
 - Path exclusions
 - Graceful shutdown and health checks
@@ -59,7 +59,6 @@ The WAF agent has evolved into a **next-generation Web Application and API Prote
 
 - Body content modification (can only block/allow)
 - OpenAPI/GraphQL schema validation (pattern-based only)
-- Higher paranoia level rules (levels 2-4 have limited coverage)
 
 ---
 
@@ -169,18 +168,25 @@ GitHub Actions workflows added but disabled to conserve minutes. Change `if: fal
 
 ---
 
+### v0.8.0 - Paranoia Level Rules ✓
+
+**Status: Complete**
+
+Expanded rule coverage for higher paranoia levels. Rule distribution:
+- **P1**: 147 rules (high confidence attacks)
+- **P2**: 50 rules (medium confidence, common evasions)
+- **P3**: 48 rules (low confidence, advanced evasions)
+- **P4**: 40 rules (maximum sensitivity)
+- **Total**: 285 rules
+
+- [x] Paranoia level 2 rules (medium confidence)
+- [x] Paranoia level 3 rules (low confidence, evasion techniques)
+- [x] Paranoia level 4 rules (maximum sensitivity)
+- [x] Update CRS compatibility tests
+
+---
+
 ## Upcoming Roadmap
-
-### v0.8.0 - Paranoia Level Rules
-
-**Priority: Medium**
-
-Expand rule coverage for higher paranoia levels.
-
-- [ ] Paranoia level 2 rules (medium confidence)
-- [ ] Paranoia level 3 rules (low confidence)
-- [ ] Paranoia level 4 rules (maximum sensitivity)
-- [ ] Update CRS compatibility tests
 
 ### v0.9.0 - Schema Validation
 
