@@ -5,16 +5,22 @@
 //! - JSON injection detection
 //! - API-specific attack patterns (BOLA, mass assignment)
 //! - JWT validation
+//! - Schema validation (OpenAPI, GraphQL SDL)
 //!
 //! # Rule ID Ranges
 //!
 //! - 98000-98099: GraphQL security rules
 //! - 98100-98199: JSON/REST API rules
 //! - 98200-98299: JWT/Auth rules
+//! - 98300-98349: OpenAPI schema violations
+//! - 98350-98399: GraphQL schema violations
 
 pub mod graphql;
 pub mod json;
 pub mod jwt;
+
+#[cfg(feature = "schema-validation")]
+pub mod schema;
 
 pub use graphql::{GraphQLInspector, GraphQLConfig, GraphQLViolation};
 pub use json::{JsonInspector, JsonViolation};

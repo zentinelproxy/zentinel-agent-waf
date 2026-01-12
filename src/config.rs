@@ -6,7 +6,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-
 /// WAF configuration
 #[derive(Debug, Clone)]
 pub struct WafConfig {
@@ -61,6 +60,151 @@ pub struct WafConfig {
     pub federated: FederatedConfig,
     /// WebSocket inspection configuration
     pub websocket: WebSocketConfig,
+    // v0.9.0: Schema Validation
+    /// Schema validation configuration (OpenAPI, GraphQL)
+    pub schema_validation: SchemaValidationConfig,
+}
+
+// v0.9.0: Schema Validation
+
+/// Configuration for schema validation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SchemaValidationConfig {
+    /// Enable schema validation
+    #[serde(default)]
+    pub enabled: bool,
+    /// OpenAPI schema validation configuration
+    #[serde(default)]
+    pub openapi: OpenApiValidationConfig,
+    /// GraphQL schema validation configuration
+    #[serde(default)]
+    pub graphql: GraphQLSchemaValidationConfig,
+    /// Schema reload interval in seconds (0 = disabled)
+    #[serde(default)]
+    pub reload_interval_secs: u64,
+}
+
+impl Default for SchemaValidationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            openapi: OpenApiValidationConfig::default(),
+            graphql: GraphQLSchemaValidationConfig::default(),
+            reload_interval_secs: 0,
+        }
+    }
+}
+
+/// OpenAPI schema validation configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct OpenApiValidationConfig {
+    /// Enable OpenAPI validation
+    #[serde(default)]
+    pub enabled: bool,
+    /// Schema source (file path or URL)
+    #[serde(default)]
+    pub schema_source: Option<String>,
+    /// Validate paths against schema
+    #[serde(default = "default_true")]
+    pub validate_paths: bool,
+    /// Validate parameters against schema
+    #[serde(default = "default_true")]
+    pub validate_parameters: bool,
+    /// Validate request body against schema
+    #[serde(default = "default_true")]
+    pub validate_request_body: bool,
+    /// Enforcement configuration
+    #[serde(default)]
+    pub enforcement: SchemaEnforcementConfig,
+}
+
+impl Default for OpenApiValidationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            schema_source: None,
+            validate_paths: true,
+            validate_parameters: true,
+            validate_request_body: true,
+            enforcement: SchemaEnforcementConfig::default(),
+        }
+    }
+}
+
+/// GraphQL schema validation configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct GraphQLSchemaValidationConfig {
+    /// Enable GraphQL schema validation
+    #[serde(default)]
+    pub enabled: bool,
+    /// Schema source (file path or URL)
+    #[serde(default)]
+    pub schema_source: Option<String>,
+    /// Validate fields against schema
+    #[serde(default = "default_true")]
+    pub validate_fields: bool,
+    /// Validate arguments against schema
+    #[serde(default = "default_true")]
+    pub validate_arguments: bool,
+    /// Block deprecated field usage
+    #[serde(default)]
+    pub block_deprecated: bool,
+    /// Enforcement configuration
+    #[serde(default)]
+    pub enforcement: SchemaEnforcementConfig,
+}
+
+impl Default for GraphQLSchemaValidationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            schema_source: None,
+            validate_fields: true,
+            validate_arguments: true,
+            block_deprecated: false,
+            enforcement: SchemaEnforcementConfig::default(),
+        }
+    }
+}
+
+/// Schema enforcement configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SchemaEnforcementConfig {
+    /// Default enforcement mode
+    #[serde(default = "default_enforcement_mode")]
+    pub default_mode: SchemaEnforcementMode,
+    /// Per-violation type overrides
+    #[serde(default)]
+    pub overrides: HashMap<String, SchemaEnforcementMode>,
+}
+
+impl Default for SchemaEnforcementConfig {
+    fn default() -> Self {
+        Self {
+            default_mode: SchemaEnforcementMode::Warn,
+            overrides: HashMap::new(),
+        }
+    }
+}
+
+/// Schema enforcement mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SchemaEnforcementMode {
+    /// Block on violation
+    Block,
+    /// Log warning only
+    Warn,
+    /// Ignore violations
+    Ignore,
+}
+
+fn default_enforcement_mode() -> SchemaEnforcementMode {
+    SchemaEnforcementMode::Warn
 }
 
 /// Configuration for WebSocket frame inspection
@@ -106,7 +250,7 @@ impl Default for WebSocketConfig {
             block_mode: true,
             accumulate_fragments: true,
             max_message_size: 1048576, // 1MB
-            block_close_code: 1008, // Policy Violation
+            block_close_code: 1008,    // Policy Violation
             block_close_reason: "WAF policy violation".to_string(),
         }
     }
@@ -564,6 +708,8 @@ impl Default for WafConfig {
             federated: FederatedConfig::default(),
             // v0.6.0: WebSocket inspection
             websocket: WebSocketConfig::default(),
+            // v0.9.0: Schema Validation
+            schema_validation: SchemaValidationConfig::default(),
         }
     }
 }
@@ -895,6 +1041,9 @@ pub struct WafConfigJson {
     // v0.6.0: WebSocket inspection
     #[serde(default)]
     pub websocket: Option<WebSocketConfig>,
+    // v0.9.0: Schema Validation
+    #[serde(default)]
+    pub schema_validation: Option<SchemaValidationConfig>,
 }
 
 fn default_paranoia() -> u8 {
@@ -967,6 +1116,8 @@ impl From<WafConfigJson> for WafConfig {
             federated: json.federated.unwrap_or_default(),
             // v0.6.0: WebSocket inspection
             websocket: json.websocket.unwrap_or_default(),
+            // v0.9.0: Schema Validation
+            schema_validation: json.schema_validation.unwrap_or_default(),
         }
     }
 }

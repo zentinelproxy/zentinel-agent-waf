@@ -9,10 +9,15 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use tracing::{debug, info};
 
-use crate::api::{ApiSecurityInspector, ApiSecurityConfig as ApiConfig, GraphQLConfig, JwtConfig};
+#[cfg(feature = "schema-validation")]
+use crate::api::schema::{
+    EnforcementConfig, EnforcementMode, RequestContext as SchemaRequestContext, SchemaSource,
+    SchemaValidatorManager,
+};
+use crate::api::{ApiSecurityConfig as ApiConfig, ApiSecurityInspector, GraphQLConfig, JwtConfig};
 use crate::automata::AutomataEngine;
 use crate::bot::{BotConfig, BotDetector};
-use crate::config::WafConfig;
+use crate::config::{SchemaEnforcementMode, WafConfig};
 use crate::credential::{CredentialConfig, CredentialProtection};
 use crate::detection::Detection;
 use crate::ml::{AttackClassifier, FingerprintBaseline, PayloadSimilarity, RequestFingerprint};
@@ -41,6 +46,9 @@ pub struct WafEngine {
     credential_protection: RwLock<CredentialProtection>,
     /// Sensitive data detector
     sensitive_detector: SensitiveDataDetector,
+    /// Schema validator (OpenAPI/GraphQL)
+    #[cfg(feature = "schema-validation")]
+    schema_validator: SchemaValidatorManager,
 }
 
 impl WafEngine {
@@ -118,6 +126,10 @@ impl WafEngine {
             ..Default::default()
         });
 
+        // Initialize schema validator (v0.9.0)
+        #[cfg(feature = "schema-validation")]
+        let schema_validator = Self::init_schema_validator(&config)?;
+
         info!(
             rules_count = rules.len(),
             paranoia_level = config.paranoia_level,
@@ -131,6 +143,7 @@ impl WafEngine {
             bot_detection = config.bot_detection.enabled,
             credential_protection = config.credential_protection.enabled,
             sensitive_data = config.sensitive_data.enabled,
+            schema_validation = config.schema_validation.enabled,
             "WAF engine initialized"
         );
 
@@ -145,6 +158,8 @@ impl WafEngine {
             bot_detector: RwLock::new(bot_detector),
             credential_protection: RwLock::new(credential_protection),
             sensitive_detector,
+            #[cfg(feature = "schema-validation")]
+            schema_validator,
         })
     }
 
@@ -186,7 +201,8 @@ impl WafEngine {
 
             if prediction.is_attack(self.config.ml.min_confidence) {
                 if let Some(attack_type) = prediction.predicted_type {
-                    let base_score = (prediction.confidence * 10.0 * self.config.ml.score_weight) as u32;
+                    let base_score =
+                        (prediction.confidence * 10.0 * self.config.ml.score_weight) as u32;
 
                     debug!(
                         confidence = prediction.confidence,
@@ -214,10 +230,16 @@ impl WafEngine {
 
             if result.is_suspicious {
                 let attack_type = match result.category {
-                    Some(crate::ml::similarity::PayloadCategory::SqlInjection) => AttackType::SqlInjection,
+                    Some(crate::ml::similarity::PayloadCategory::SqlInjection) => {
+                        AttackType::SqlInjection
+                    }
                     Some(crate::ml::similarity::PayloadCategory::Xss) => AttackType::Xss,
-                    Some(crate::ml::similarity::PayloadCategory::CommandInjection) => AttackType::CommandInjection,
-                    Some(crate::ml::similarity::PayloadCategory::PathTraversal) => AttackType::PathTraversal,
+                    Some(crate::ml::similarity::PayloadCategory::CommandInjection) => {
+                        AttackType::CommandInjection
+                    }
+                    Some(crate::ml::similarity::PayloadCategory::PathTraversal) => {
+                        AttackType::PathTraversal
+                    }
                     _ => AttackType::ProtocolAttack, // Use ProtocolAttack as catch-all
                 };
 
@@ -247,7 +269,9 @@ impl WafEngine {
 
     /// Check using automata-based multi-pattern matching (optimized path)
     fn check_with_automata(&self, value: &str, location: &str) -> Vec<Detection> {
-        let matches = self.automata.find_all(value, location, self.config.paranoia_level);
+        let matches = self
+            .automata
+            .find_all(value, location, self.config.paranoia_level);
 
         matches
             .into_iter()
@@ -402,16 +426,11 @@ impl WafEngine {
             return Vec::new();
         }
 
-        let fingerprint = RequestFingerprint::from_request(
-            method,
-            path,
-            query,
-            headers,
-            body_size,
-        );
+        let fingerprint = RequestFingerprint::from_request(method, path, query, headers, body_size);
 
         // Get anomaly score from baseline
-        let result = self.fingerprint_baseline
+        let result = self
+            .fingerprint_baseline
             .read()
             .map(|baseline| baseline.anomaly_score(path, &fingerprint))
             .ok();
@@ -457,7 +476,8 @@ impl WafEngine {
         body: Option<&str>,
         auth_header: Option<&str>,
     ) -> Vec<Detection> {
-        self.api_inspector.inspect(path, content_type, body, auth_header)
+        self.api_inspector
+            .inspect(path, content_type, body, auth_header)
     }
 
     /// Check request for bot characteristics
@@ -479,12 +499,8 @@ impl WafEngine {
             Err(_) => return Vec::new(),
         };
 
-        let (classification, detections) = bot_detector.analyze(
-            user_agent,
-            headers,
-            source_ip,
-            tls_fingerprint,
-        );
+        let (classification, detections) =
+            bot_detector.analyze(user_agent, headers, source_ip, tls_fingerprint);
 
         if classification.is_bad_bot() {
             debug!(
@@ -553,6 +569,123 @@ impl WafEngine {
         }
 
         detections
+    }
+
+    /// Initialize schema validator from configuration
+    #[cfg(feature = "schema-validation")]
+    fn init_schema_validator(config: &WafConfig) -> Result<SchemaValidatorManager> {
+        let mut manager = SchemaValidatorManager::new();
+
+        if !config.schema_validation.enabled {
+            return Ok(manager);
+        }
+
+        // Convert enforcement config
+        let enforcement = EnforcementConfig {
+            default_mode: match config.schema_validation.openapi.enforcement.default_mode {
+                SchemaEnforcementMode::Block => EnforcementMode::Block,
+                SchemaEnforcementMode::Warn => EnforcementMode::Warn,
+                SchemaEnforcementMode::Ignore => EnforcementMode::Ignore,
+            },
+            overrides: config
+                .schema_validation
+                .openapi
+                .enforcement
+                .overrides
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        match v {
+                            SchemaEnforcementMode::Block => EnforcementMode::Block,
+                            SchemaEnforcementMode::Warn => EnforcementMode::Warn,
+                            SchemaEnforcementMode::Ignore => EnforcementMode::Ignore,
+                        },
+                    )
+                })
+                .collect(),
+        };
+
+        manager = manager.with_enforcement(enforcement);
+
+        // Load OpenAPI schema if configured
+        if config.schema_validation.openapi.enabled {
+            if let Some(ref source_str) = config.schema_validation.openapi.schema_source {
+                let source = SchemaSource::parse(source_str);
+                match manager.load_openapi(source) {
+                    Ok(()) => info!(source = source_str, "OpenAPI schema loaded"),
+                    Err(e) => {
+                        tracing::warn!(source = source_str, error = %e, "Failed to load OpenAPI schema");
+                    }
+                }
+            }
+        }
+
+        // Load GraphQL schema if configured
+        if config.schema_validation.graphql.enabled {
+            if let Some(ref source_str) = config.schema_validation.graphql.schema_source {
+                let source = SchemaSource::parse(source_str);
+                match manager.load_graphql(source) {
+                    Ok(()) => info!(source = source_str, "GraphQL schema loaded"),
+                    Err(e) => {
+                        tracing::warn!(source = source_str, error = %e, "Failed to load GraphQL schema");
+                    }
+                }
+            }
+        }
+
+        Ok(manager)
+    }
+
+    /// Check request against loaded schemas (OpenAPI/GraphQL)
+    ///
+    /// Returns detections for schema violations.
+    #[cfg(feature = "schema-validation")]
+    pub fn check_schema(
+        &self,
+        method: &str,
+        path: &str,
+        query_params: &HashMap<String, Vec<String>>,
+        headers: &HashMap<String, Vec<String>>,
+        content_type: Option<&str>,
+        body: Option<&str>,
+    ) -> Vec<Detection> {
+        if !self.config.schema_validation.enabled {
+            return Vec::new();
+        }
+
+        let ctx = SchemaRequestContext {
+            method,
+            path,
+            query_params,
+            headers,
+            content_type,
+            body,
+        };
+
+        let detections = self.schema_validator.validate_request(&ctx);
+
+        if !detections.is_empty() {
+            debug!(
+                detection_count = detections.len(),
+                path = path,
+                "Schema validation violations detected"
+            );
+        }
+
+        detections
+    }
+
+    /// Check if schema validation is enabled and ready
+    #[cfg(feature = "schema-validation")]
+    pub fn schema_validation_ready(&self) -> bool {
+        self.config.schema_validation.enabled && self.schema_validator.is_ready()
+    }
+
+    /// Check if schema validation is enabled and ready (stub for non-feature builds)
+    #[cfg(not(feature = "schema-validation"))]
+    pub fn schema_validation_ready(&self) -> bool {
+        false
     }
 }
 
@@ -636,10 +769,7 @@ mod tests {
     fn test_check_request() {
         let engine = test_engine();
         let mut headers = HashMap::new();
-        headers.insert(
-            "User-Agent".to_string(),
-            vec!["Mozilla/5.0".to_string()],
-        );
+        headers.insert("User-Agent".to_string(), vec!["Mozilla/5.0".to_string()]);
 
         let detections = engine.check_request("/api/search", Some("q=UNION SELECT"), &headers);
         assert!(!detections.is_empty());

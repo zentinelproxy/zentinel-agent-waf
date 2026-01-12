@@ -1,8 +1,8 @@
 # Roadmap
 
-## Current Status (v0.8.0)
+## Current Status (v0.9.0)
 
-The WAF agent has evolved into a **next-generation Web Application and API Protection (WAAP)** platform with ML-powered detection, anomaly scoring, and enterprise-grade features.
+The WAF agent has evolved into a **next-generation Web Application and API Protection (WAAP)** platform with ML-powered detection, anomaly scoring, schema validation, and enterprise-grade features.
 
 ### What Works
 
@@ -30,6 +30,8 @@ The WAF agent has evolved into a **next-generation Web Application and API Prote
 - JWT validation ("none" algorithm, weak algorithms, expiry)
 - JSON depth/complexity limits
 - NoSQL injection patterns
+- OpenAPI 3.0/3.1 schema validation (with `schema-validation` feature)
+- GraphQL SDL schema validation (with `schema-validation` feature)
 
 **Bot Detection**
 - Scanner fingerprint detection
@@ -58,7 +60,6 @@ The WAF agent has evolved into a **next-generation Web Application and API Prote
 ### What Doesn't Work
 
 - Body content modification (can only block/allow)
-- OpenAPI/GraphQL schema validation (pattern-based only)
 
 ---
 
@@ -184,17 +185,27 @@ Expanded rule coverage for higher paranoia levels. Rule distribution:
 - [x] Paranoia level 4 rules (maximum sensitivity)
 - [x] Update CRS compatibility tests
 
+### v0.9.0 - Schema Validation ✓
+
+**Status: Complete**
+
+Added OpenAPI and GraphQL schema validation for API-aware request filtering.
+
+- [x] OpenAPI 3.0/3.1 specification parsing (`openapiv3` crate)
+- [x] GraphQL SDL schema parsing (`graphql-parser` crate)
+- [x] Request path/method validation against OpenAPI specs
+- [x] Parameter validation (path, query, header)
+- [x] GraphQL query field and argument validation
+- [x] Deprecated field usage detection
+- [x] Configurable enforcement modes (block/warn/ignore)
+- [x] Per-violation-type enforcement overrides
+- [x] File and URL schema loading
+- [x] Schema module with 98300-98399 rule ID range
+- [x] Integration with WafEngine (`check_schema()` method)
+
 ---
 
 ## Upcoming Roadmap
-
-### v0.9.0 - Schema Validation
-
-**Priority: Medium**
-
-- [ ] OpenAPI specification parsing and validation
-- [ ] GraphQL schema validation
-- [ ] Request/response schema enforcement
 
 ### v1.0.0 - Production Ready
 
