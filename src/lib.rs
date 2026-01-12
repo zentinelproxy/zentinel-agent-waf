@@ -29,12 +29,16 @@ pub mod config;
 pub mod credential;
 pub mod detection;
 pub mod engine;
+pub mod intel;
+pub mod metrics;
 pub mod ml;
 pub mod plugin;
 pub mod rules;
 pub mod scoring;
 pub mod sensitive;
 pub mod streaming;
+pub mod supplychain;
+pub mod vpatching;
 
 // Re-exports for convenience
 pub use config::{ScoringConfig, WafConfig, WafConfigJson};

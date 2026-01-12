@@ -567,6 +567,9 @@ fn ml_attack_type_id(attack_type: AttackType) -> u32 {
         AttackType::RequestSmuggling => 11,
         AttackType::Deserialization => 12,
         AttackType::DataLeakage => 13,
+        AttackType::Reconnaissance => 14,
+        AttackType::RemoteCodeExecution => 15,
+        AttackType::SupplyChain => 16,
     }
 }
 

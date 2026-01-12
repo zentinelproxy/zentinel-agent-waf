@@ -23,6 +23,10 @@ pub enum AttackType {
     Deserialization,
     // Phase 3 attack types
     DataLeakage,
+    // Phase 4 attack types
+    Reconnaissance,
+    RemoteCodeExecution,
+    SupplyChain,
 }
 
 impl std::fmt::Display for AttackType {
@@ -41,6 +45,9 @@ impl std::fmt::Display for AttackType {
             AttackType::Ssrf => write!(f, "Server-Side Request Forgery"),
             AttackType::Deserialization => write!(f, "Insecure Deserialization"),
             AttackType::DataLeakage => write!(f, "Data Leakage"),
+            AttackType::Reconnaissance => write!(f, "Reconnaissance"),
+            AttackType::RemoteCodeExecution => write!(f, "Remote Code Execution"),
+            AttackType::SupplyChain => write!(f, "Supply Chain Attack"),
         }
     }
 }

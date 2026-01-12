@@ -48,6 +48,15 @@ pub struct WafConfig {
     pub credential_protection: CredentialProtectionConfig,
     /// Sensitive data detection configuration
     pub sensitive_data: SensitiveDataDetectionConfig,
+    // Phase 4: Enterprise features
+    /// Threat intelligence configuration
+    pub threat_intel: ThreatIntelConfig,
+    /// Virtual patching configuration
+    pub virtual_patching: VirtualPatchingConfig,
+    /// Supply chain protection configuration
+    pub supply_chain: SupplyChainConfig,
+    /// Metrics configuration
+    pub metrics: MetricsConfig,
 }
 
 /// Configuration for API security inspection
@@ -216,6 +225,124 @@ impl Default for SensitiveDataDetectionConfig {
     }
 }
 
+// Phase 4: Enterprise configurations
+
+/// Configuration for threat intelligence
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct ThreatIntelConfig {
+    /// Enable threat intelligence
+    #[serde(default)]
+    pub enabled: bool,
+    /// Enable IP reputation checking
+    #[serde(default = "default_true")]
+    pub ip_reputation_enabled: bool,
+    /// Enable domain reputation checking
+    #[serde(default = "default_true")]
+    pub domain_reputation_enabled: bool,
+    /// Enable IoC checking
+    #[serde(default = "default_true")]
+    pub ioc_enabled: bool,
+    /// Score threshold for blocking (0-100)
+    #[serde(default = "default_intel_block_threshold")]
+    pub block_threshold: u8,
+}
+
+impl Default for ThreatIntelConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            ip_reputation_enabled: true,
+            domain_reputation_enabled: true,
+            ioc_enabled: true,
+            block_threshold: 80,
+        }
+    }
+}
+
+fn default_intel_block_threshold() -> u8 {
+    80
+}
+
+/// Configuration for virtual patching
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct VirtualPatchingConfig {
+    /// Enable virtual patching
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    /// Auto-update patches from feed
+    #[serde(default)]
+    pub auto_update: bool,
+    /// Log patch matches
+    #[serde(default = "default_true")]
+    pub log_matches: bool,
+}
+
+impl Default for VirtualPatchingConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            auto_update: false,
+            log_matches: true,
+        }
+    }
+}
+
+/// Configuration for supply chain protection
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SupplyChainConfig {
+    /// Enable supply chain protection
+    #[serde(default)]
+    pub enabled: bool,
+    /// Enable SRI validation
+    #[serde(default = "default_true")]
+    pub sri_enabled: bool,
+    /// Enable suspicious pattern detection
+    #[serde(default = "default_true")]
+    pub pattern_detection_enabled: bool,
+    /// Enable CSP header checking
+    #[serde(default = "default_true")]
+    pub csp_enabled: bool,
+}
+
+impl Default for SupplyChainConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            sri_enabled: true,
+            pattern_detection_enabled: true,
+            csp_enabled: true,
+        }
+    }
+}
+
+/// Configuration for metrics collection
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct MetricsConfig {
+    /// Enable metrics collection
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    /// Enable per-rule metrics
+    #[serde(default = "default_true")]
+    pub per_rule_metrics: bool,
+    /// Enable latency histograms
+    #[serde(default = "default_true")]
+    pub latency_histograms: bool,
+}
+
+impl Default for MetricsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            per_rule_metrics: true,
+            latency_histograms: true,
+        }
+    }
+}
+
 /// Configuration for streaming body inspection
 ///
 /// Streaming mode inspects request bodies incrementally as chunks arrive,
@@ -360,6 +487,11 @@ impl Default for WafConfig {
             bot_detection: BotDetectionConfig::default(),
             credential_protection: CredentialProtectionConfig::default(),
             sensitive_data: SensitiveDataDetectionConfig::default(),
+            // Phase 4: Enterprise features
+            threat_intel: ThreatIntelConfig::default(),
+            virtual_patching: VirtualPatchingConfig::default(),
+            supply_chain: SupplyChainConfig::default(),
+            metrics: MetricsConfig::default(),
         }
     }
 }
@@ -610,6 +742,15 @@ pub struct WafConfigJson {
     pub credential_protection: Option<CredentialProtectionConfig>,
     #[serde(default)]
     pub sensitive_data: Option<SensitiveDataDetectionConfig>,
+    // Phase 4: Enterprise features
+    #[serde(default)]
+    pub threat_intel: Option<ThreatIntelConfig>,
+    #[serde(default)]
+    pub virtual_patching: Option<VirtualPatchingConfig>,
+    #[serde(default)]
+    pub supply_chain: Option<SupplyChainConfig>,
+    #[serde(default)]
+    pub metrics: Option<MetricsConfig>,
 }
 
 fn default_paranoia() -> u8 {
@@ -674,6 +815,11 @@ impl From<WafConfigJson> for WafConfig {
             bot_detection: json.bot_detection.unwrap_or_default(),
             credential_protection: json.credential_protection.unwrap_or_default(),
             sensitive_data: json.sensitive_data.unwrap_or_default(),
+            // Phase 4: Enterprise features
+            threat_intel: json.threat_intel.unwrap_or_default(),
+            virtual_patching: json.virtual_patching.unwrap_or_default(),
+            supply_chain: json.supply_chain.unwrap_or_default(),
+            metrics: json.metrics.unwrap_or_default(),
         }
     }
 }
