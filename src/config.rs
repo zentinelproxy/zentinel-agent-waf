@@ -57,6 +57,8 @@ pub struct WafConfig {
     pub supply_chain: SupplyChainConfig,
     /// Metrics configuration
     pub metrics: MetricsConfig,
+    /// Federated learning configuration
+    pub federated: FederatedConfig,
 }
 
 /// Configuration for API security inspection
@@ -492,8 +494,66 @@ impl Default for WafConfig {
             virtual_patching: VirtualPatchingConfig::default(),
             supply_chain: SupplyChainConfig::default(),
             metrics: MetricsConfig::default(),
+            federated: FederatedConfig::default(),
         }
     }
+}
+
+/// Federated learning configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct FederatedConfig {
+    /// Enable federated learning
+    #[serde(default)]
+    pub enabled: bool,
+    /// Coordinator server URL
+    #[serde(default)]
+    pub coordinator_url: Option<String>,
+    /// Local training batch size
+    #[serde(default = "default_batch_size")]
+    pub batch_size: usize,
+    /// Minimum samples before contributing
+    #[serde(default = "default_min_samples")]
+    pub min_samples: usize,
+    /// Update interval in seconds
+    #[serde(default = "default_update_interval")]
+    pub update_interval_secs: u64,
+    /// Privacy budget (epsilon for differential privacy)
+    #[serde(default = "default_privacy_epsilon")]
+    pub privacy_epsilon: f64,
+    /// Enable secure aggregation
+    #[serde(default = "default_true")]
+    pub secure_aggregation: bool,
+}
+
+impl Default for FederatedConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            coordinator_url: None,
+            batch_size: 32,
+            min_samples: 1000,
+            update_interval_secs: 3600,
+            privacy_epsilon: 1.0,
+            secure_aggregation: true,
+        }
+    }
+}
+
+fn default_batch_size() -> usize {
+    32
+}
+
+fn default_min_samples() -> usize {
+    1000
+}
+
+fn default_update_interval() -> u64 {
+    3600
+}
+
+fn default_privacy_epsilon() -> f64 {
+    1.0
 }
 
 /// Scoring configuration for anomaly-based detection
@@ -751,6 +811,8 @@ pub struct WafConfigJson {
     pub supply_chain: Option<SupplyChainConfig>,
     #[serde(default)]
     pub metrics: Option<MetricsConfig>,
+    #[serde(default)]
+    pub federated: Option<FederatedConfig>,
 }
 
 fn default_paranoia() -> u8 {
@@ -820,6 +882,7 @@ impl From<WafConfigJson> for WafConfig {
             virtual_patching: json.virtual_patching.unwrap_or_default(),
             supply_chain: json.supply_chain.unwrap_or_default(),
             metrics: json.metrics.unwrap_or_default(),
+            federated: json.federated.unwrap_or_default(),
         }
     }
 }

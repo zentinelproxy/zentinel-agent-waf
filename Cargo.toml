@@ -64,13 +64,31 @@ parking_lot = "0.12"
 # Cryptographic hashing
 sha2 = "0.10"
 
+# Random number generation (for differential privacy)
+rand = "0.8"
+rand_distr = "0.4"
+
+# UUID generation
+uuid = { version = "1.10", features = ["v4"] }
+
 # Command line
 clap = { version = "4.5", features = ["derive", "env"] }
 
 [features]
 default = []
 ml-onnx = ["tract-onnx"]
+federated-network = ["reqwest"]
 
 [dev-dependencies]
 tempfile = "3.12"
-uuid = { version = "1.10", features = ["v4"] }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Optional: HTTP client for federated learning
+[dependencies.reqwest]
+version = "0.11"
+features = ["json"]
+optional = true
+
+[[bench]]
+name = "waf_benchmark"
+harness = false

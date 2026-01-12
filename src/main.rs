@@ -5,10 +5,17 @@
 use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
-use tracing::info;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tracing::{error, info};
 
 use sentinel_agent_protocol::AgentServer;
 use sentinel_agent_waf::{WafAgent, WafConfig};
+
+/// Version information
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Global shutdown flag for graceful termination
+static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 
 /// Command line arguments
 #[derive(Parser, Debug)]
@@ -93,8 +100,68 @@ impl Args {
     }
 }
 
+/// Install panic hook for production diagnostics
+fn install_panic_hook() {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        // Log panic with structured fields for observability
+        let payload = panic_info
+            .payload()
+            .downcast_ref::<&str>()
+            .map(|s| *s)
+            .or_else(|| panic_info.payload().downcast_ref::<String>().map(|s| s.as_str()))
+            .unwrap_or("Unknown panic payload");
+
+        let location = panic_info
+            .location()
+            .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+            .unwrap_or_else(|| "unknown location".to_string());
+
+        // Use eprintln for panic logging as tracing may not work during panic
+        eprintln!(
+            "PANIC: WAF agent panicked at {}: {}",
+            location, payload
+        );
+
+        // Also try to log via tracing if available
+        error!(
+            panic_payload = %payload,
+            panic_location = %location,
+            "WAF agent panicked - this should not happen in production"
+        );
+
+        // Call default hook for stack traces in debug builds
+        default_hook(panic_info);
+    }));
+}
+
+/// Setup signal handlers for graceful shutdown
+fn setup_signal_handlers() {
+    // Handle SIGINT (Ctrl+C) and SIGTERM
+    tokio::spawn(async {
+        let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())
+            .expect("Failed to register SIGINT handler");
+        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("Failed to register SIGTERM handler");
+
+        tokio::select! {
+            _ = sigint.recv() => {
+                info!("Received SIGINT, initiating graceful shutdown");
+            }
+            _ = sigterm.recv() => {
+                info!("Received SIGTERM, initiating graceful shutdown");
+            }
+        }
+
+        SHUTDOWN_REQUESTED.store(true, Ordering::SeqCst);
+    });
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Install panic hook first for early crash diagnostics
+    install_panic_hook();
+
     // Parse command line arguments
     let args = Args::parse();
 
@@ -109,7 +176,13 @@ async fn main() -> Result<()> {
         .json()
         .init();
 
-    info!("Starting Sentinel WAF Agent");
+    info!(
+        version = VERSION,
+        "Starting Sentinel WAF Agent"
+    );
+
+    // Setup signal handlers for graceful shutdown
+    setup_signal_handlers();
 
     // Build configuration
     let config = args.to_config();
@@ -127,13 +200,28 @@ async fn main() -> Result<()> {
         "Configuration loaded"
     );
 
-    // Create agent
-    let agent = WafAgent::new(config)?;
+    // Create agent with error context
+    let agent = WafAgent::new(config).map_err(|e| {
+        error!(error = %e, "Failed to initialize WAF agent");
+        e
+    })?;
+
+    info!(
+        socket = ?args.socket,
+        "WAF agent initialized successfully, starting server"
+    );
 
     // Start agent server
-    info!(socket = ?args.socket, "Starting agent server");
     let server = AgentServer::new("sentinel-waf-agent", args.socket, Box::new(agent));
-    server.run().await.map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    Ok(())
+    match server.run().await {
+        Ok(()) => {
+            info!("WAF agent shutdown complete");
+            Ok(())
+        }
+        Err(e) => {
+            error!(error = %e, "WAF agent server error");
+            Err(anyhow::anyhow!("Server error: {}", e))
+        }
+    }
 }

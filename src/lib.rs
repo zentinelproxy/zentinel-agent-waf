@@ -29,6 +29,7 @@ pub mod config;
 pub mod credential;
 pub mod detection;
 pub mod engine;
+pub mod federated;
 pub mod intel;
 pub mod metrics;
 pub mod ml;
@@ -78,6 +79,34 @@ impl Default for BodyInspectionState {
     }
 }
 
+/// Health status for the WAF agent
+///
+/// Used for readiness/liveness probes in container orchestration.
+#[derive(Debug, Clone, Default)]
+pub struct HealthStatus {
+    /// Overall health - true if all components are functional
+    pub healthy: bool,
+    /// Whether the WAF engine lock is acquirable
+    pub engine_ok: bool,
+    /// Number of rules loaded
+    pub rule_count: usize,
+    /// Current paranoia level
+    pub paranoia_level: u8,
+    /// Number of pending request body inspections
+    pub pending_requests: usize,
+    /// Number of pending response body inspections
+    pub pending_responses: usize,
+    /// List of issues encountered
+    pub issues: Vec<String>,
+}
+
+impl HealthStatus {
+    /// Returns true if the agent is healthy and ready to serve requests
+    pub fn is_healthy(&self) -> bool {
+        self.healthy
+    }
+}
+
 /// WAF agent implementing the Sentinel agent protocol
 pub struct WafAgent {
     engine: Arc<RwLock<WafEngine>>,
@@ -101,6 +130,58 @@ impl WafAgent {
         let new_engine = WafEngine::new(config)?;
         *self.engine.write().await = new_engine;
         Ok(())
+    }
+
+    /// Health check for the WAF agent
+    ///
+    /// Returns a HealthStatus indicating whether all components are functional.
+    /// Use this for readiness/liveness probes in container orchestration.
+    pub async fn health_check(&self) -> HealthStatus {
+        let mut status = HealthStatus::default();
+
+        // Check engine lock is acquirable
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            self.engine.read(),
+        ).await {
+            Ok(engine) => {
+                status.engine_ok = true;
+                status.rule_count = engine.rules().len();
+                status.paranoia_level = engine.config.paranoia_level;
+            }
+            Err(_) => {
+                status.engine_ok = false;
+                status.issues.push("Engine lock timeout".to_string());
+            }
+        }
+
+        // Check pending bodies maps are accessible
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            self.pending_request_bodies.read(),
+        ).await {
+            Ok(pending) => {
+                status.pending_requests = pending.len();
+            }
+            Err(_) => {
+                status.issues.push("Request bodies lock timeout".to_string());
+            }
+        }
+
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            self.pending_response_bodies.read(),
+        ).await {
+            Ok(pending) => {
+                status.pending_responses = pending.len();
+            }
+            Err(_) => {
+                status.issues.push("Response bodies lock timeout".to_string());
+            }
+        }
+
+        status.healthy = status.engine_ok && status.issues.is_empty();
+        status
     }
 
     /// Process detections and make a decision based on scoring
@@ -457,7 +538,16 @@ impl AgentHandler for WafAgent {
 
         // If this is the last chunk, inspect the full body
         if event.is_last {
-            let body_data = pending.remove(&event.correlation_id).unwrap();
+            let body_data = match pending.remove(&event.correlation_id) {
+                Some(data) => data,
+                None => {
+                    warn!(
+                        correlation_id = %event.correlation_id,
+                        "Response body correlation ID not found, skipping inspection"
+                    );
+                    return AgentResponse::default_allow();
+                }
+            };
             let body_str = String::from_utf8_lossy(&body_data.data);
 
             debug!(
