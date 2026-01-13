@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: sentinel
+
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - poddisruptionbudget.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: sentinel
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: ghcr.io/raskell-io/sentinel-agent-waf
+    newTag: "0.9.0"

@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-waf-config
+  namespace: sentinel
+  labels:
+    app.kubernetes.io/name: sentinel-waf
+    app.kubernetes.io/component: waf
+data:
+  # WAF Configuration
+  WAF_PARANOIA_LEVEL: "1"
+  WAF_BLOCK_MODE: "true"
+  WAF_SQLI: "true"
+  WAF_XSS: "true"
+  WAF_PATH_TRAVERSAL: "true"
+  WAF_COMMAND_INJECTION: "true"
+  WAF_PROTOCOL: "true"
+  WAF_BODY_INSPECTION: "true"
+  WAF_MAX_BODY_SIZE: "1048576"
+  WAF_RESPONSE_INSPECTION: "false"
+  WAF_WEBSOCKET_INSPECTION: "false"
+  WAF_VERBOSE: "false"
+
+  # Scoring thresholds
+  WAF_BLOCK_THRESHOLD: "25"
+  WAF_LOG_THRESHOLD: "10"
+
+  # API Security
+  WAF_GRAPHQL_ENABLED: "true"
+  WAF_JWT_ENABLED: "true"
+
+  # Bot Detection
+  WAF_BOT_DETECTION: "true"
+
+  # Threat Intelligence
+  WAF_THREAT_INTEL: "true"
+
+  # Metrics
+  WAF_METRICS_ENABLED: "true"

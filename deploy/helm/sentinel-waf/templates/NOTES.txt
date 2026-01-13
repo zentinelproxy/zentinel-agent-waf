@@ -1,0 +1,26 @@
+Sentinel WAF Agent has been deployed!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Version: {{ .Chart.AppVersion }}
+
+Configuration:
+  Paranoia Level: {{ .Values.waf.paranoiaLevel }}
+  Block Mode: {{ .Values.waf.blockMode }}
+  Replicas: {{ .Values.replicaCount }}
+
+To check the deployment status:
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "sentinel-waf.name" . }}
+
+To view logs:
+  kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "sentinel-waf.name" . }} -f
+
+To check health:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "sentinel-waf.fullname" . }} 8080:{{ .Values.service.healthPort }}
+  curl http://localhost:8080/health
+
+To view metrics:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "sentinel-waf.fullname" . }} 9090:{{ .Values.service.metricsPort }}
+  curl http://localhost:9090/metrics
+
+Documentation: https://sentinel.raskell.io/agents/waf/

@@ -207,9 +207,9 @@ Added OpenAPI and GraphQL schema validation for API-aware request filtering.
 
 ## Upcoming Roadmap
 
-### v1.0.0 - Production Ready (Performance Baseline)
+### v1.0.0 - Production Ready (Performance Baseline) ✓
 
-**Status: In Progress**
+**Status: Complete**
 
 Performance and memory targets validated via comprehensive benchmarking.
 
@@ -228,8 +228,8 @@ Performance and memory targets validated via comprehensive benchmarking.
 
 - [x] Performance optimization (<5ms p99 for 500 rules) - **Achieved: <5µs**
 - [x] Memory optimization (<50MB steady state) - **Achieved: 48.82 MB peak**
-- [ ] Production deployment documentation
-- [ ] Kubernetes manifests and Helm chart
+- [x] Production deployment documentation
+- [x] Kubernetes manifests and Helm chart
 
 ---
 

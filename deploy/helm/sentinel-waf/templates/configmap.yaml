@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sentinel-waf.fullname" . }}
+  labels:
+    {{- include "sentinel-waf.labels" . | nindent 4 }}
+data:
+  # Core settings
+  WAF_PARANOIA_LEVEL: {{ .Values.waf.paranoiaLevel | quote }}
+  WAF_BLOCK_MODE: {{ .Values.waf.blockMode | quote }}
+  WAF_VERBOSE: {{ .Values.waf.verbose | quote }}
+
+  # Detection modules
+  WAF_SQLI: {{ .Values.waf.detection.sqli | quote }}
+  WAF_XSS: {{ .Values.waf.detection.xss | quote }}
+  WAF_PATH_TRAVERSAL: {{ .Values.waf.detection.pathTraversal | quote }}
+  WAF_COMMAND_INJECTION: {{ .Values.waf.detection.commandInjection | quote }}
+  WAF_PROTOCOL: {{ .Values.waf.detection.protocol | quote }}
+
+  # Body inspection
+  WAF_BODY_INSPECTION: {{ .Values.waf.bodyInspection.enabled | quote }}
+  WAF_MAX_BODY_SIZE: {{ .Values.waf.bodyInspection.maxSize | quote }}
+
+  # Response inspection
+  WAF_RESPONSE_INSPECTION: {{ .Values.waf.responseInspection.enabled | quote }}
+
+  # WebSocket inspection
+  WAF_WEBSOCKET_INSPECTION: {{ .Values.waf.websocket.enabled | quote }}
+  WAF_WEBSOCKET_TEXT_FRAMES: {{ .Values.waf.websocket.textFrames | quote }}
+  WAF_WEBSOCKET_BINARY_FRAMES: {{ .Values.waf.websocket.binaryFrames | quote }}
+  WAF_WEBSOCKET_MAX_FRAME_SIZE: {{ .Values.waf.websocket.maxFrameSize | quote }}
+
+  # Scoring
+  WAF_SCORING_ENABLED: {{ .Values.waf.scoring.enabled | quote }}
+  WAF_BLOCK_THRESHOLD: {{ .Values.waf.scoring.blockThreshold | quote }}
+  WAF_LOG_THRESHOLD: {{ .Values.waf.scoring.logThreshold | quote }}
+
+  # API Security
+  WAF_GRAPHQL_ENABLED: {{ .Values.waf.apiSecurity.graphqlEnabled | quote }}
+  WAF_JWT_ENABLED: {{ .Values.waf.apiSecurity.jwtEnabled | quote }}
+  WAF_JSON_ENABLED: {{ .Values.waf.apiSecurity.jsonEnabled | quote }}
+
+  # Bot detection
+  WAF_BOT_DETECTION: {{ .Values.waf.botDetection.enabled | quote }}
+  WAF_BOT_TIMING_ANALYSIS: {{ .Values.waf.botDetection.timingAnalysis | quote }}
+  WAF_BOT_BLOCK_SCANNERS: {{ .Values.waf.botDetection.blockScanners | quote }}
+
+  # Sensitive data
+  WAF_SENSITIVE_DATA: {{ .Values.waf.sensitiveData.enabled | quote }}
+  WAF_SENSITIVE_DATA_MASK: {{ .Values.waf.sensitiveData.maskInLogs | quote }}
+
+  # Threat intelligence
+  WAF_THREAT_INTEL: {{ .Values.waf.threatIntel.enabled | quote }}
+  WAF_BLOCK_TOR_EXIT_NODES: {{ .Values.waf.threatIntel.blockTorExitNodes | quote }}
+
+  # Virtual patching
+  WAF_VIRTUAL_PATCHING: {{ .Values.waf.virtualPatching.enabled | quote }}
+  WAF_VIRTUAL_PATCHING_LOG: {{ .Values.waf.virtualPatching.logMatches | quote }}
+
+  # Metrics
+  WAF_METRICS_ENABLED: {{ .Values.waf.metrics.enabled | quote }}
+  WAF_PER_RULE_METRICS: {{ .Values.waf.metrics.perRuleMetrics | quote }}
+
+  {{- if .Values.waf.excludePaths }}
+  WAF_EXCLUDE_PATHS: {{ .Values.waf.excludePaths | quote }}
+  {{- end }}

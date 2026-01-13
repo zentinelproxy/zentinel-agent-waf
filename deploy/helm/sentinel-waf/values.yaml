@@ -1,0 +1,186 @@
+# Default values for sentinel-waf
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/raskell-io/sentinel-agent-waf
+  pullPolicy: IfNotPresent
+  tag: ""  # Defaults to Chart appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  healthPort: 8080
+  metricsPort: 9090
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 1000m
+    memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: health
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: sentinel-waf
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# WAF Configuration
+waf:
+  # Socket path for communication with Sentinel proxy
+  socketPath: /var/run/sentinel/waf.sock
+
+  # Paranoia level (1-4)
+  # 1: High-confidence detections only (recommended for production)
+  # 2: Medium-confidence rules added
+  # 3: Low-confidence rules added
+  # 4: Maximum sensitivity
+  paranoiaLevel: 1
+
+  # Block mode (true) or detect-only mode (false)
+  blockMode: true
+
+  # Detection modules
+  detection:
+    sqli: true
+    xss: true
+    pathTraversal: true
+    commandInjection: true
+    protocol: true
+
+  # Body inspection
+  bodyInspection:
+    enabled: true
+    maxSize: 1048576  # 1MB
+
+  # Response inspection
+  responseInspection:
+    enabled: false
+
+  # WebSocket inspection
+  websocket:
+    enabled: false
+    textFrames: true
+    binaryFrames: false
+    maxFrameSize: 65536
+
+  # Anomaly scoring
+  scoring:
+    enabled: true
+    blockThreshold: 25
+    logThreshold: 10
+
+  # API Security
+  apiSecurity:
+    graphqlEnabled: true
+    jwtEnabled: true
+    jsonEnabled: true
+
+  # Bot detection
+  botDetection:
+    enabled: true
+    timingAnalysis: true
+    blockScanners: true
+
+  # Sensitive data detection
+  sensitiveData:
+    enabled: true
+    maskInLogs: true
+
+  # Threat intelligence
+  threatIntel:
+    enabled: true
+    blockTorExitNodes: false
+
+  # Virtual patching
+  virtualPatching:
+    enabled: true
+    logMatches: true
+
+  # Metrics
+  metrics:
+    enabled: true
+    perRuleMetrics: false
+
+  # Verbose logging
+  verbose: false
+
+  # Path exclusions (comma-separated)
+  excludePaths: ""
+
+# Extra environment variables
+extraEnv: []
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra volumes
+extraVolumes: []

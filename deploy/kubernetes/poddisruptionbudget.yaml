@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sentinel-waf
+  namespace: sentinel
+  labels:
+    app.kubernetes.io/name: sentinel-waf
+    app.kubernetes.io/component: waf
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sentinel-waf

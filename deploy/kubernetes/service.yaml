@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel-waf
+  namespace: sentinel
+  labels:
+    app.kubernetes.io/name: sentinel-waf
+    app.kubernetes.io/component: waf
+spec:
+  type: ClusterIP
+  ports:
+    - name: health
+      port: 8080
+      targetPort: health
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: sentinel-waf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinel-waf-headless
+  namespace: sentinel
+  labels:
+    app.kubernetes.io/name: sentinel-waf
+    app.kubernetes.io/component: waf
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: health
+      port: 8080
+      targetPort: health
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: sentinel-waf

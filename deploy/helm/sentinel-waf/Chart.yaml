@@ -1,0 +1,32 @@
+apiVersion: v2
+name: sentinel-waf
+description: Next-generation Web Application Firewall for Sentinel proxy
+type: application
+version: 0.9.0
+appVersion: "0.9.0"
+kubeVersion: ">=1.23.0-0"
+
+home: https://sentinel.raskell.io/agents/waf/
+icon: https://sentinel.raskell.io/favicon.ico
+sources:
+  - https://github.com/raskell-io/sentinel-agent-waf
+
+keywords:
+  - waf
+  - security
+  - firewall
+  - proxy
+  - sentinel
+  - waap
+
+maintainers:
+  - name: Sentinel Core Team
+    url: https://github.com/raskell-io
+
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://sentinel.raskell.io/agents/waf/
+    - name: Source
+      url: https://github.com/raskell-io/sentinel-agent-waf
