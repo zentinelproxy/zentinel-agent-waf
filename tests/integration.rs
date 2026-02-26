@@ -1,13 +1,14 @@
-//! Integration tests for the WAF agent using the zentinel-agent-protocol.
+//! Integration tests for the WAF agent using the zentinel-agent-protocol v2.
 //!
-//! These tests spin up an actual AgentServer and connect via AgentClient
+//! These tests spin up a UDS v2 agent server and connect via the v2 UDS client
 //! to verify the full protocol flow.
 
 use base64::Engine;
 use zentinel_agent_protocol::{
-    AgentClient, AgentServer, ConfigureEvent, Decision, EventType, RequestBodyChunkEvent,
+    Decision, RequestBodyChunkEvent,
     RequestHeadersEvent, RequestMetadata, ResponseBodyChunkEvent,
 };
+use zentinel_agent_protocol::v2::{AgentClientV2Uds, UdsAgentServerV2};
 use zentinel_agent_waf::{WafAgent, WafConfig};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -19,7 +20,7 @@ async fn start_test_server(config: WafConfig) -> (tempfile::TempDir, std::path::
     let socket_path = dir.path().join("waf-test.sock");
 
     let agent = WafAgent::new(config).expect("Failed to create WAF agent");
-    let server = AgentServer::new("test-waf", socket_path.clone(), Box::new(agent));
+    let server = UdsAgentServerV2::new("test-waf", socket_path.clone(), Box::new(agent));
 
     tokio::spawn(async move {
         let _ = server.run().await;
@@ -32,10 +33,16 @@ async fn start_test_server(config: WafConfig) -> (tempfile::TempDir, std::path::
 }
 
 /// Create a client connected to the test server
-async fn create_client(socket_path: &std::path::Path) -> AgentClient {
-    AgentClient::unix_socket("test-client", socket_path, Duration::from_secs(5))
-        .await
-        .expect("Failed to connect to agent")
+async fn create_client(socket_path: &std::path::Path) -> AgentClientV2Uds {
+    let client = AgentClientV2Uds::new(
+        "test-client",
+        socket_path.to_string_lossy().to_string(),
+        Duration::from_secs(5),
+    )
+    .await
+    .expect("Failed to create client");
+    client.connect().await.expect("Failed to connect to agent");
+    client
 }
 
 /// Create a basic request metadata
@@ -113,11 +120,11 @@ fn is_allow(decision: &Decision) -> bool {
 async fn test_sqli_in_query_string_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -137,11 +144,11 @@ async fn test_sqli_in_query_string_blocked() {
 async fn test_sqli_union_select_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/api?q=1 UNION SELECT * FROM users", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -155,11 +162,11 @@ async fn test_sqli_detect_only_mode() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -180,11 +187,11 @@ async fn test_sqli_disabled_allows_attack() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -200,11 +207,11 @@ async fn test_sqli_disabled_allows_attack() {
 async fn test_xss_script_tag_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/page?name=<script>alert('xss')</script>", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -215,11 +222,11 @@ async fn test_xss_script_tag_blocked() {
 async fn test_xss_event_handler_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/page?input=<img src=x onerror=alert(1)>", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -230,11 +237,11 @@ async fn test_xss_event_handler_blocked() {
 async fn test_xss_javascript_uri_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/redirect?url=javascript:alert(1)", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -245,7 +252,7 @@ async fn test_xss_javascript_uri_blocked() {
 async fn test_xss_in_header_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let mut headers = HashMap::new();
     headers.insert(
@@ -255,7 +262,7 @@ async fn test_xss_in_header_blocked() {
 
     let event = make_request_headers("/api", headers);
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -270,11 +277,11 @@ async fn test_xss_in_header_blocked() {
 async fn test_path_traversal_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/files/../../../etc/passwd", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -285,12 +292,12 @@ async fn test_path_traversal_blocked() {
 async fn test_path_traversal_encoded_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // URL-encoded path traversal with sensitive file access triggers multiple rules
     let event = make_request_headers("/files/..%2f..%2f..%2fetc/passwd", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -305,11 +312,11 @@ async fn test_path_traversal_encoded_blocked() {
 async fn test_command_injection_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/run?cmd=`whoami`", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -320,11 +327,11 @@ async fn test_command_injection_blocked() {
 async fn test_command_injection_pipe_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let event = make_request_headers("/exec?input=foo | cat /etc/passwd", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -342,12 +349,12 @@ async fn test_excluded_path_allows_attack() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // Attack on excluded path should be allowed
     let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -361,12 +368,12 @@ async fn test_non_excluded_path_blocks_attack() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // Attack on non-excluded path should be blocked
     let event = make_request_headers("/api?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -381,12 +388,12 @@ async fn test_non_excluded_path_blocks_attack() {
 async fn test_body_sqli_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // First send headers (will pass)
     let headers_event = make_request_headers("/api/users", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &headers_event)
+        .send_request_headers(&headers_event.metadata.correlation_id, &headers_event)
         .await
         .expect("Failed to send headers event");
     assert!(is_allow(&response.decision), "Expected Allow decision");
@@ -398,7 +405,7 @@ async fn test_body_sqli_blocked() {
         true,
     );
     let response = client
-        .send_event(EventType::RequestBodyChunk, &body_event)
+        .send_request_body_chunk(&body_event.correlation_id, &body_event)
         .await
         .expect("Failed to send body event");
 
@@ -409,11 +416,11 @@ async fn test_body_sqli_blocked() {
 async fn test_body_xss_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let headers_event = make_request_headers("/api/comments", HashMap::new());
     let _ = client
-        .send_event(EventType::RequestHeaders, &headers_event)
+        .send_request_headers(&headers_event.metadata.correlation_id, &headers_event)
         .await
         .expect("Failed to send headers event");
 
@@ -423,7 +430,7 @@ async fn test_body_xss_blocked() {
         true,
     );
     let response = client
-        .send_event(EventType::RequestBodyChunk, &body_event)
+        .send_request_body_chunk(&body_event.correlation_id, &body_event)
         .await
         .expect("Failed to send body event");
 
@@ -434,11 +441,11 @@ async fn test_body_xss_blocked() {
 async fn test_body_chunked_attack_blocked() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let headers_event = make_request_headers("/api/data", HashMap::new());
     let _ = client
-        .send_event(EventType::RequestHeaders, &headers_event)
+        .send_request_headers(&headers_event.metadata.correlation_id, &headers_event)
         .await
         .expect("Failed to send headers event");
 
@@ -449,7 +456,7 @@ async fn test_body_chunked_attack_blocked() {
         false,
     );
     let response = client
-        .send_event(EventType::RequestBodyChunk, &chunk1)
+        .send_request_body_chunk(&chunk1.correlation_id, &chunk1)
         .await
         .expect("Failed to send chunk 1");
     assert!(
@@ -463,7 +470,7 @@ async fn test_body_chunked_attack_blocked() {
         true,
     );
     let response = client
-        .send_event(EventType::RequestBodyChunk, &chunk2)
+        .send_request_body_chunk(&chunk2.correlation_id, &chunk2)
         .await
         .expect("Failed to send chunk 2");
     assert!(is_block(&response.decision), "Expected Block for full body");
@@ -476,11 +483,11 @@ async fn test_body_inspection_disabled_allows_attack() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let headers_event = make_request_headers("/api/users", HashMap::new());
     let _ = client
-        .send_event(EventType::RequestHeaders, &headers_event)
+        .send_request_headers(&headers_event.metadata.correlation_id, &headers_event)
         .await
         .expect("Failed to send headers event");
 
@@ -490,7 +497,7 @@ async fn test_body_inspection_disabled_allows_attack() {
         true,
     );
     let response = client
-        .send_event(EventType::RequestBodyChunk, &body_event)
+        .send_request_body_chunk(&body_event.correlation_id, &body_event)
         .await
         .expect("Failed to send body event");
 
@@ -505,11 +512,11 @@ async fn test_body_exceeds_max_size_skips_inspection() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let headers_event = make_request_headers("/api/upload", HashMap::new());
     let _ = client
-        .send_event(EventType::RequestHeaders, &headers_event)
+        .send_request_headers(&headers_event.metadata.correlation_id, &headers_event)
         .await
         .expect("Failed to send headers event");
 
@@ -520,7 +527,7 @@ async fn test_body_exceeds_max_size_skips_inspection() {
     );
     let body_event = make_body_chunk(&headers_event.metadata.correlation_id, &large_body, true);
     let response = client
-        .send_event(EventType::RequestBodyChunk, &body_event)
+        .send_request_body_chunk(&body_event.correlation_id, &body_event)
         .await
         .expect("Failed to send body event");
 
@@ -539,7 +546,7 @@ async fn test_response_body_xss_detected() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let correlation_id = uuid::Uuid::new_v4().to_string();
     let response_body = make_response_body_chunk(
@@ -548,7 +555,7 @@ async fn test_response_body_xss_detected() {
         true,
     );
     let response = client
-        .send_event(EventType::ResponseBodyChunk, &response_body)
+        .send_response_body_chunk(&response_body.correlation_id, &response_body)
         .await
         .expect("Failed to send response body event");
 
@@ -572,7 +579,7 @@ async fn test_response_body_inspection_disabled_ignores_attack() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let correlation_id = uuid::Uuid::new_v4().to_string();
     let response_body = make_response_body_chunk(
@@ -581,7 +588,7 @@ async fn test_response_body_inspection_disabled_ignores_attack() {
         true,
     );
     let response = client
-        .send_event(EventType::ResponseBodyChunk, &response_body)
+        .send_response_body_chunk(&response_body.correlation_id, &response_body)
         .await
         .expect("Failed to send response body event");
 
@@ -606,7 +613,7 @@ async fn test_response_body_inspection_disabled_ignores_attack() {
 async fn test_clean_request_allowed() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let mut headers = HashMap::new();
     headers.insert("User-Agent".to_string(), vec!["Mozilla/5.0".to_string()]);
@@ -614,7 +621,7 @@ async fn test_clean_request_allowed() {
 
     let event = make_request_headers("/api/users?page=1&limit=10", headers);
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -626,11 +633,11 @@ async fn test_clean_request_allowed() {
 async fn test_clean_body_allowed() {
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let headers_event = make_request_headers("/api/users", HashMap::new());
     let _ = client
-        .send_event(EventType::RequestHeaders, &headers_event)
+        .send_request_headers(&headers_event.metadata.correlation_id, &headers_event)
         .await
         .expect("Failed to send headers event");
 
@@ -640,7 +647,7 @@ async fn test_clean_body_allowed() {
         true,
     );
     let response = client
-        .send_event(EventType::RequestBodyChunk, &body_event)
+        .send_request_body_chunk(&body_event.correlation_id, &body_event)
         .await
         .expect("Failed to send body event");
 
@@ -663,14 +670,14 @@ async fn test_scanner_user_agent_detected() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     let mut headers = HashMap::new();
     headers.insert("User-Agent".to_string(), vec!["sqlmap/1.0".to_string()]);
 
     let event = make_request_headers("/api", headers);
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -688,13 +695,13 @@ async fn test_paranoia_level_2_detects_more_attacks() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // At paranoia level 2, more patterns are detected with lower threshold
     // Using a clearer attack pattern that triggers at paranoia 2
     let event = make_request_headers("/api?q='; WAITFOR DELAY '0:0:5'--", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -708,13 +715,13 @@ async fn test_paranoia_level_1_less_sensitive() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // At paranoia level 1, some ambiguous patterns are allowed
     // Simple keyword without context should be allowed
     let event = make_request_headers("/api?q=SELECT", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
 
@@ -725,12 +732,13 @@ async fn test_paranoia_level_1_less_sensitive() {
 // Configure Event Tests (Config Block)
 // ============================================================================
 
-/// Helper function to create a ConfigureEvent
-fn make_configure_event(config_json: serde_json::Value) -> ConfigureEvent {
-    ConfigureEvent {
-        agent_id: "test-waf".to_string(),
-        config: config_json,
-    }
+/// Send a configuration update via the v2 protocol and return the response
+async fn send_config(client: &AgentClientV2Uds, config_json: serde_json::Value) -> zentinel_agent_protocol::AgentResponse {
+    let correlation_id = uuid::Uuid::new_v4().to_string();
+    client
+        .send_configure(&correlation_id, &config_json)
+        .await
+        .expect("Failed to send configure event")
 }
 
 #[tokio::test]
@@ -738,24 +746,20 @@ async fn test_configure_event_applies_paranoia_level() {
     // Start with default config (paranoia level 1)
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // First verify simple keyword is allowed at paranoia level 1
     let event = make_request_headers("/api?q=SELECT", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(is_allow(&response.decision), "Expected Allow at paranoia 1");
 
     // Send configure event to increase paranoia level to 2
-    let config_event = make_configure_event(serde_json::json!({
+    let response = send_config(&client, serde_json::json!({
         "paranoia-level": 2
-    }));
-    let response = client
-        .send_event(EventType::Configure, &config_event)
-        .await
-        .expect("Failed to send configure event");
+    })).await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -764,7 +768,7 @@ async fn test_configure_event_applies_paranoia_level() {
     // Now use a clear attack pattern that blocks at paranoia 2
     let event = make_request_headers("/api?q='; WAITFOR DELAY '0:0:5'--", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(is_block(&response.decision), "Expected Block at paranoia 2");
@@ -775,12 +779,12 @@ async fn test_configure_event_disables_sqli() {
     // Start with default config (SQLi enabled)
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // First verify SQLi is blocked
     let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -789,13 +793,9 @@ async fn test_configure_event_disables_sqli() {
     );
 
     // Send configure event to disable SQLi
-    let config_event = make_configure_event(serde_json::json!({
+    let response = send_config(&client, serde_json::json!({
         "sqli": false
-    }));
-    let response = client
-        .send_event(EventType::Configure, &config_event)
-        .await
-        .expect("Failed to send configure event");
+    })).await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -804,7 +804,7 @@ async fn test_configure_event_disables_sqli() {
     // Now SQLi should be allowed
     let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -818,24 +818,20 @@ async fn test_configure_event_sets_detect_only_mode() {
     // Start with default config (block mode)
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // First verify XSS is blocked
     let event = make_request_headers("/page?x=<script>alert(1)</script>", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(is_block(&response.decision), "Expected Block in block mode");
 
     // Send configure event to set detect-only mode
-    let config_event = make_configure_event(serde_json::json!({
+    let response = send_config(&client, serde_json::json!({
         "block-mode": false
-    }));
-    let response = client
-        .send_event(EventType::Configure, &config_event)
-        .await
-        .expect("Failed to send configure event");
+    })).await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -844,7 +840,7 @@ async fn test_configure_event_sets_detect_only_mode() {
     // Now XSS should be detected but allowed
     let event = make_request_headers("/page?x=<script>alert(1)</script>", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -865,12 +861,12 @@ async fn test_configure_event_sets_exclude_paths() {
     // Start with default config (no exclusions)
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // First verify /health is blocked with SQLi
     let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -879,13 +875,9 @@ async fn test_configure_event_sets_exclude_paths() {
     );
 
     // Send configure event to exclude /health
-    let config_event = make_configure_event(serde_json::json!({
+    let response = send_config(&client, serde_json::json!({
         "exclude-paths": ["/health", "/metrics"]
-    }));
-    let response = client
-        .send_event(EventType::Configure, &config_event)
-        .await
-        .expect("Failed to send configure event");
+    })).await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -894,7 +886,7 @@ async fn test_configure_event_sets_exclude_paths() {
     // Now /health should be excluded
     let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -905,7 +897,7 @@ async fn test_configure_event_sets_exclude_paths() {
     // But /api should still be blocked
     let event = make_request_headers("/api?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -919,10 +911,10 @@ async fn test_configure_event_full_config() {
     // Start with default config
     let config = WafConfig::default();
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // Send full configuration via configure event
-    let config_event = make_configure_event(serde_json::json!({
+    let response = send_config(&client, serde_json::json!({
         "paranoia-level": 2,
         "sqli": true,
         "xss": true,
@@ -934,11 +926,7 @@ async fn test_configure_event_full_config() {
         "body-inspection": true,
         "max-body-size": 1048576,
         "response-inspection": false
-    }));
-    let response = client
-        .send_event(EventType::Configure, &config_event)
-        .await
-        .expect("Failed to send configure event");
+    })).await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -947,7 +935,7 @@ async fn test_configure_event_full_config() {
     // Verify SQLi is blocked with clear attack pattern
     let event = make_request_headers("/api?q=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -958,7 +946,7 @@ async fn test_configure_event_full_config() {
     // Verify exclusion is active
     let event = make_request_headers("/health?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(
@@ -976,14 +964,10 @@ async fn test_configure_event_with_empty_config() {
         ..Default::default()
     };
     let (_dir, socket_path) = start_test_server(config).await;
-    let mut client = create_client(&socket_path).await;
+    let client = create_client(&socket_path).await;
 
     // Send empty config - should use defaults
-    let config_event = make_configure_event(serde_json::json!({}));
-    let response = client
-        .send_event(EventType::Configure, &config_event)
-        .await
-        .expect("Failed to send configure event");
+    let response = send_config(&client, serde_json::json!({})).await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for empty config"
@@ -993,7 +977,7 @@ async fn test_configure_event_with_empty_config() {
     // SQLi should now be blocked (was disabled before reconfigure)
     let event = make_request_headers("/search?id=' OR '1'='1", HashMap::new());
     let response = client
-        .send_event(EventType::RequestHeaders, &event)
+        .send_request_headers(&event.metadata.correlation_id, &event)
         .await
         .expect("Failed to send event");
     assert!(

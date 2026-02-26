@@ -4,7 +4,8 @@
 //! fragmentation handling, and configuration options.
 
 use zentinel_agent_waf::{WafAgent, WafConfig, WebSocketConfig};
-use zentinel_agent_protocol::{AgentHandler, WebSocketFrameEvent, AgentResponse, WebSocketDecision};
+use zentinel_agent_protocol::v2::AgentHandlerV2;
+use zentinel_agent_protocol::{WebSocketFrameEvent, AgentResponse, WebSocketDecision};
 use base64::Engine as Base64Engine;
 
 /// Create a WebSocket-enabled agent for testing

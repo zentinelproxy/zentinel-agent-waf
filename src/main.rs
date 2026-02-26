@@ -1,7 +1,7 @@
 //! Zentinel WAF Agent CLI
 //!
 //! Command-line interface for the Web Application Firewall agent.
-//! Supports both Unix Domain Socket (v1 compatibility) and gRPC (v2) transports.
+//! Supports both Unix Domain Socket and gRPC transports using the v2 protocol.
 
 use anyhow::Result;
 use clap::Parser;
@@ -9,8 +9,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::{error, info};
 
-use zentinel_agent_protocol::AgentServer;
-use zentinel_agent_protocol::v2::GrpcAgentServerV2;
+use zentinel_agent_protocol::v2::{GrpcAgentServerV2, UdsAgentServerV2};
 use zentinel_agent_waf::{WafAgent, WafConfig, WebSocketConfig};
 
 /// Version information
@@ -22,7 +21,7 @@ static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 /// Transport mode for the agent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TransportMode {
-    /// Unix Domain Socket (v1 protocol compatibility)
+    /// Unix Domain Socket (v2 protocol)
     Uds,
     /// gRPC over TCP (v2 protocol)
     Grpc,
@@ -207,16 +206,16 @@ fn setup_signal_handlers() {
     });
 }
 
-/// Run the agent with UDS transport (v1 compatibility)
+/// Run the agent with UDS transport (v2 protocol)
 async fn run_uds_server(agent: WafAgent, socket_path: PathBuf) -> Result<()> {
     info!(
         socket = ?socket_path,
         transport = "uds",
-        protocol = "v1",
-        "Starting WAF agent with UDS transport"
+        protocol = "v2",
+        "Starting WAF agent with UDS v2 transport"
     );
 
-    let server = AgentServer::new("zentinel-waf-agent", socket_path, Box::new(agent));
+    let server = UdsAgentServerV2::new("zentinel-waf-agent", socket_path, Box::new(agent));
 
     match server.run().await {
         Ok(()) => {

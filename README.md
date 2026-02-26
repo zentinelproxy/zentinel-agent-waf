@@ -36,19 +36,30 @@ A next-generation Web Application Firewall agent for [Zentinel](https://github.c
 
 ## Installation
 
+### Using Bundle (Recommended)
+
+```bash
+# Install just this agent
+zentinel bundle install waf
+
+# Or install all bundled agents
+zentinel bundle install
+```
+
+The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://zentinelproxy.io/docs/deployment/bundle/) for details.
+
+### Using Cargo
+
+```bash
+cargo install zentinel-agent-waf
+```
+
 ### From Source
 
 ```bash
 git clone https://github.com/zentinelproxy/zentinel-agent-waf
 cd zentinel-agent-waf
 cargo build --release
-```
-
-### Binary
-
-```bash
-# After building
-./target/release/zentinel-waf-agent --socket /var/run/zentinel/waf.sock
 ```
 
 ## Quick Start
@@ -272,7 +283,7 @@ agents {
         transport "unix_socket" {
             path "/var/run/zentinel/waf.sock"
         }
-        events ["request_headers", "request_body_chunk", "response_body_chunk"]
+        events "request_headers" "request_body_chunk" "response_body_chunk"
         timeout-ms 50
         failure-mode "open"
     }
@@ -282,7 +293,7 @@ routes {
     route "api" {
         matches { path-prefix "/api" }
         upstream "backend"
-        agents ["waf"]
+        agents "waf"
     }
 }
 ```
