@@ -568,7 +568,7 @@ mod tests {
         let output = fl.forward(&model, &features);
 
         // Output should be between 0 and 1 (sigmoid)
-        assert!(output >= 0.0 && output <= 1.0);
+        assert!((0.0..=1.0).contains(&output));
     }
 
     #[test]

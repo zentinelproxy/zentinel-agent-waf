@@ -336,7 +336,7 @@ mod api_security {
         let deep_json =
             r#"{"a":{"b":{"c":{"d":{"e":{"f":{"g":{"h":{"i":{"j":{"k":"deep"}}}}}}}}}}}"#;
 
-        let detections = engine.check(deep_json, "body");
+        let _detections = engine.check(deep_json, "body");
         // Detection depends on JSON parsing in check flow
     }
 }

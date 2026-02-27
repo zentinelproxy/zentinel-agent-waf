@@ -10,7 +10,7 @@ use zentinel_agent_waf::{WafConfig, WafEngine};
 fn separator(char: char, width: usize) {
     println!(
         "{}",
-        std::iter::repeat(char).take(width).collect::<String>()
+        std::iter::repeat_n(char, width).collect::<String>()
     );
 }
 

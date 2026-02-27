@@ -10,26 +10,32 @@ use zentinel_agent_waf::{WafAgent, WafConfig, WebSocketConfig};
 
 /// Create a WebSocket-enabled agent for testing
 fn create_websocket_agent() -> WafAgent {
-    let mut config = WafConfig::default();
-    config.websocket = WebSocketConfig {
-        enabled: true,
-        inspect_text_frames: true,
-        inspect_binary_frames: false,
-        max_frame_size: 65536,
-        block_mode: true,
-        accumulate_fragments: true,
-        max_message_size: 1048576,
-        block_close_code: 1008,
-        block_close_reason: "WAF policy violation".to_string(),
+    let config = WafConfig {
+        websocket: WebSocketConfig {
+            enabled: true,
+            inspect_text_frames: true,
+            inspect_binary_frames: false,
+            max_frame_size: 65536,
+            block_mode: true,
+            accumulate_fragments: true,
+            max_message_size: 1048576,
+            block_close_code: 1008,
+            block_close_reason: "WAF policy violation".to_string(),
+        },
+        ..Default::default()
     };
     WafAgent::new(config).expect("Failed to create agent")
 }
 
 /// Create a WebSocket agent with custom config
 fn create_websocket_agent_with_config(f: impl FnOnce(&mut WebSocketConfig)) -> WafAgent {
-    let mut config = WafConfig::default();
-    config.websocket = WebSocketConfig::default();
-    config.websocket.enabled = true;
+    let mut config = WafConfig {
+        websocket: WebSocketConfig {
+            enabled: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     f(&mut config.websocket);
     WafAgent::new(config).expect("Failed to create agent")
 }
@@ -88,20 +94,18 @@ fn continuation_frame(
 
 /// Check if response indicates a block (close connection)
 fn is_blocked(response: &AgentResponse) -> bool {
-    match &response.websocket_decision {
-        Some(WebSocketDecision::Close { .. }) => true,
-        Some(WebSocketDecision::Drop) => true,
-        _ => false,
-    }
+    matches!(
+        &response.websocket_decision,
+        Some(WebSocketDecision::Close { .. }) | Some(WebSocketDecision::Drop)
+    )
 }
 
 /// Check if response indicates allow
 fn is_allowed(response: &AgentResponse) -> bool {
-    match &response.websocket_decision {
-        Some(WebSocketDecision::Allow) => true,
-        None => true, // Default is allow
-        _ => false,
-    }
+    matches!(
+        &response.websocket_decision,
+        Some(WebSocketDecision::Allow) | None
+    )
 }
 
 // =============================================================================

@@ -13,8 +13,10 @@ fn create_engine() -> WafEngine {
 }
 
 fn create_paranoid_engine(level: u8) -> WafEngine {
-    let mut config = WafConfig::default();
-    config.paranoia_level = level;
+    let config = WafConfig {
+        paranoia_level: level,
+        ..Default::default()
+    };
     WafEngine::new(config).expect("Failed to create engine")
 }
 

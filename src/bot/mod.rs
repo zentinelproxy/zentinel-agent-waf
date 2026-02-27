@@ -333,7 +333,7 @@ mod tests {
         let mut detector = BotDetector::new(BotConfig::default());
         let headers = HashMap::new();
 
-        let (classification, detections) = detector.analyze(Some(""), &headers, None, None);
+        let (_classification, detections) = detector.analyze(Some(""), &headers, None, None);
         assert!(!detections.is_empty());
     }
 

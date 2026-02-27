@@ -394,7 +394,7 @@ mod tests {
         assert_eq!(shares.len(), 3);
 
         // Sum of shares should equal original
-        let mut sum = vec![0.0; 3];
+        let mut sum = [0.0; 3];
         for share in &shares {
             for (i, &v) in share.iter().enumerate() {
                 sum[i] += v;
