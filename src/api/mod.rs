@@ -22,9 +22,9 @@ pub mod jwt;
 #[cfg(feature = "schema-validation")]
 pub mod schema;
 
-pub use graphql::{GraphQLInspector, GraphQLConfig, GraphQLViolation};
+pub use graphql::{GraphQLConfig, GraphQLInspector, GraphQLViolation};
 pub use json::{JsonInspector, JsonViolation};
-pub use jwt::{JwtInspector, JwtConfig, JwtViolation};
+pub use jwt::{JwtConfig, JwtInspector, JwtViolation};
 
 use crate::detection::Detection;
 
@@ -85,11 +85,9 @@ impl ApiSecurityInspector {
         let mut detections = Vec::new();
 
         // Check for GraphQL
-        if self.config.graphql_enabled {
-            if is_graphql_request(path, content_type) {
-                if let Some(body) = body {
-                    detections.extend(self.graphql.inspect(body));
-                }
+        if self.config.graphql_enabled && is_graphql_request(path, content_type) {
+            if let Some(body) = body {
+                detections.extend(self.graphql.inspect(body));
             }
         }
 

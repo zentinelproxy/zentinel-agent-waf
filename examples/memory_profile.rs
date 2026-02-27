@@ -2,13 +2,16 @@
 //!
 //! Measures steady-state memory usage for different configurations.
 
-use zentinel_agent_waf::{WafConfig, WafEngine};
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use zentinel_agent_waf::{WafConfig, WafEngine};
 
 fn separator(char: char, width: usize) {
-    println!("{}", std::iter::repeat(char).take(width).collect::<String>());
+    println!(
+        "{}",
+        std::iter::repeat(char).take(width).collect::<String>()
+    );
 }
 
 // Custom allocator to track memory usage
@@ -128,10 +131,7 @@ fn main() {
         "  All features (PL4): {:.2} MB steady state",
         bytes_to_mb(after - before)
     );
-    println!(
-        "  Peak during init:   {:.2} MB",
-        bytes_to_mb(peak - before)
-    );
+    println!("  Peak during init:   {:.2} MB", bytes_to_mb(peak - before));
 
     // Simulate request processing
     println!();
@@ -139,14 +139,8 @@ fn main() {
     separator('-', 40);
 
     let headers: HashMap<String, Vec<String>> = [
-        (
-            "User-Agent".to_string(),
-            vec!["Mozilla/5.0".to_string()],
-        ),
-        (
-            "Cookie".to_string(),
-            vec!["session=abc123".to_string()],
-        ),
+        ("User-Agent".to_string(), vec!["Mozilla/5.0".to_string()]),
+        ("Cookie".to_string(), vec!["session=abc123".to_string()]),
     ]
     .into_iter()
     .collect();
@@ -181,7 +175,10 @@ fn main() {
     let total = ALLOCATED.load(Ordering::SeqCst);
     let total_peak = PEAK.load(Ordering::SeqCst);
     println!("  Total current allocation: {:.2} MB", bytes_to_mb(total));
-    println!("  Total peak allocation:    {:.2} MB", bytes_to_mb(total_peak));
+    println!(
+        "  Total peak allocation:    {:.2} MB",
+        bytes_to_mb(total_peak)
+    );
     println!();
 
     let target = 50.0;

@@ -16,7 +16,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(90)
             .tags(&["ldap", "injection"])
             .build()?,
-
         RuleBuilder::new(933101, "LDAP Injection: Wildcard bypass")
             .description("Detects LDAP wildcard authentication bypass")
             .attack_type(AttackType::LdapInjection)
@@ -28,7 +27,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(90)
             .tags(&["ldap", "auth-bypass"])
             .build()?,
-
         RuleBuilder::new(933102, "LDAP Injection: Boolean injection")
             .description("Detects LDAP boolean-based injection")
             .attack_type(AttackType::LdapInjection)
@@ -40,7 +38,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(90)
             .tags(&["ldap", "boolean"])
             .build()?,
-
         RuleBuilder::new(933103, "LDAP Injection: DN injection")
             .description("Detects LDAP Distinguished Name injection")
             .attack_type(AttackType::LdapInjection)
@@ -52,7 +49,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(90)
             .tags(&["ldap", "dn"])
             .build()?,
-
         RuleBuilder::new(933104, "LDAP Injection: Null byte")
             .description("Detects null byte injection in LDAP queries")
             .attack_type(AttackType::LdapInjection)

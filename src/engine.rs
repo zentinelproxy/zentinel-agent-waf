@@ -17,7 +17,7 @@ use crate::api::schema::{
 use crate::api::{ApiSecurityConfig as ApiConfig, ApiSecurityInspector, GraphQLConfig, JwtConfig};
 use crate::automata::AutomataEngine;
 use crate::bot::{BotConfig, BotDetector};
-use crate::config::{SchemaEnforcementMode, WafConfig};
+use crate::config::WafConfig;
 use crate::credential::{CredentialConfig, CredentialProtection};
 use crate::detection::Detection;
 use crate::ml::{AttackClassifier, FingerprintBaseline, PayloadSimilarity, RequestFingerprint};

@@ -8,8 +8,8 @@
 
 pub mod command;
 pub mod ldap;
-pub mod xpath;
 pub mod ssti;
+pub mod xpath;
 
 use crate::rules::Rule;
 use anyhow::Result;

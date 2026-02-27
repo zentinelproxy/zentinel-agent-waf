@@ -2,8 +2,8 @@
 //!
 //! End-to-end tests simulating real HTTP traffic patterns.
 
-use zentinel_agent_waf::{WafConfig, WafEngine, Detection};
 use std::collections::HashMap;
+use zentinel_agent_waf::{Detection, WafConfig, WafEngine};
 
 /// Test fixture for consistent test setup
 fn create_engine() -> WafEngine {
@@ -31,11 +31,15 @@ fn has_detection(detections: &[Detection]) -> bool {
 }
 
 fn has_sqli(detections: &[Detection]) -> bool {
-    detections.iter().any(|d| d.attack_type.to_string().contains("SQL"))
+    detections
+        .iter()
+        .any(|d| d.attack_type.to_string().contains("SQL"))
 }
 
 fn has_xss(detections: &[Detection]) -> bool {
-    detections.iter().any(|d| d.attack_type.to_string().contains("Cross-Site"))
+    detections
+        .iter()
+        .any(|d| d.attack_type.to_string().contains("Cross-Site"))
 }
 
 // =============================================================================
@@ -157,11 +161,7 @@ mod xss {
                 "Failed to detect reflected XSS: {}",
                 payload
             );
-            assert!(
-                has_xss(&detections),
-                "Should detect as XSS: {}",
-                payload
-            );
+            assert!(has_xss(&detections), "Should detect as XSS: {}", payload);
         }
     }
 
@@ -169,9 +169,7 @@ mod xss {
     fn test_dom_xss() {
         let engine = create_engine();
         // These patterns require DOM-specific rules which are planned for future
-        let payloads = vec![
-            "eval(atob('YWxlcnQoMSk='))",
-        ];
+        let payloads = vec!["eval(atob('YWxlcnQoMSk='))"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -223,7 +221,10 @@ mod path_traversal {
     fn test_traversal_in_params() {
         let engine = create_engine();
         let detections = engine.check("../../../../etc/passwd", "query");
-        assert!(has_detection(&detections), "Should detect traversal in query");
+        assert!(
+            has_detection(&detections),
+            "Should detect traversal in query"
+        );
     }
 }
 
@@ -237,12 +238,7 @@ mod command_injection {
     #[test]
     fn test_basic_injection() {
         let engine = create_engine();
-        let payloads = vec![
-            "; cat /etc/passwd",
-            "| ls -la",
-            "$(id)",
-            "`id`",
-        ];
+        let payloads = vec!["; cat /etc/passwd", "| ls -la", "$(id)", "`id`"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -272,21 +268,20 @@ mod full_request {
     #[test]
     fn test_full_request_clean() {
         let engine = create_engine();
-        let headers = headers_from_vec(vec![
-            ("User-Agent", "Mozilla/5.0"),
-            ("Accept", "text/html"),
-        ]);
+        let headers =
+            headers_from_vec(vec![("User-Agent", "Mozilla/5.0"), ("Accept", "text/html")]);
 
         let detections = engine.check_request("/api/users", Some("page=1&limit=10"), &headers);
-        assert!(detections.is_empty(), "Clean request should have no detections");
+        assert!(
+            detections.is_empty(),
+            "Clean request should have no detections"
+        );
     }
 
     #[test]
     fn test_full_request_sqli_in_query() {
         let engine = create_engine();
-        let headers = headers_from_vec(vec![
-            ("User-Agent", "Mozilla/5.0"),
-        ]);
+        let headers = headers_from_vec(vec![("User-Agent", "Mozilla/5.0")]);
 
         let detections = engine.check_request("/search", Some("q=' OR 1=1--"), &headers);
         assert!(has_sqli(&detections), "Should detect SQLi in query");
@@ -295,9 +290,7 @@ mod full_request {
     #[test]
     fn test_full_request_xss_in_header() {
         let engine = create_engine();
-        let headers = headers_from_vec(vec![
-            ("Referer", "<script>alert(1)</script>"),
-        ]);
+        let headers = headers_from_vec(vec![("Referer", "<script>alert(1)</script>")]);
 
         let detections = engine.check_request("/page", None, &headers);
         assert!(has_xss(&detections), "Should detect XSS in header");
@@ -317,19 +310,11 @@ mod bot_detection {
             c.bot_detection.enabled = true;
         });
 
-        let scanners = vec![
-            "sqlmap/1.0",
-            "nikto",
-            "nmap",
-        ];
+        let scanners = vec!["sqlmap/1.0", "nikto", "nmap"];
 
         for ua in scanners {
             let detections = engine.check(ua, "header:User-Agent");
-            assert!(
-                has_detection(&detections),
-                "Should detect scanner: {}",
-                ua
-            );
+            assert!(has_detection(&detections), "Should detect scanner: {}", ua);
         }
     }
 }
@@ -348,7 +333,8 @@ mod api_security {
         });
 
         // Deeply nested JSON
-        let deep_json = r#"{"a":{"b":{"c":{"d":{"e":{"f":{"g":{"h":{"i":{"j":{"k":"deep"}}}}}}}}}}}"#;
+        let deep_json =
+            r#"{"a":{"b":{"c":{"d":{"e":{"f":{"g":{"h":{"i":{"j":{"k":"deep"}}}}}}}}}}}"#;
 
         let detections = engine.check(deep_json, "body");
         // Detection depends on JSON parsing in check flow
@@ -388,10 +374,7 @@ mod sensitive_data {
         let response = r#"{"ssn": "123-45-6789", "name": "Jane Doe"}"#;
         let detections = engine.check_sensitive_data(response);
 
-        assert!(
-            has_detection(&detections),
-            "Should detect SSN in response"
-        );
+        assert!(has_detection(&detections), "Should detect SSN in response");
     }
 
     #[test]
@@ -534,7 +517,10 @@ mod edge_cases {
     fn test_empty_input() {
         let engine = create_engine();
         let detections = engine.check("", "query");
-        assert!(detections.is_empty(), "Empty input should have no detections");
+        assert!(
+            detections.is_empty(),
+            "Empty input should have no detections"
+        );
     }
 
     #[test]

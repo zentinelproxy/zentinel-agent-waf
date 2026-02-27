@@ -158,7 +158,12 @@ fn install_panic_hook() {
             .payload()
             .downcast_ref::<&str>()
             .copied()
-            .or_else(|| panic_info.payload().downcast_ref::<String>().map(|s| s.as_str()))
+            .or_else(|| {
+                panic_info
+                    .payload()
+                    .downcast_ref::<String>()
+                    .map(|s| s.as_str())
+            })
             .unwrap_or("Unknown panic payload");
 
         let location = panic_info
@@ -167,10 +172,7 @@ fn install_panic_hook() {
             .unwrap_or_else(|| "unknown location".to_string());
 
         // Use eprintln for panic logging as tracing may not work during panic
-        eprintln!(
-            "PANIC: WAF agent panicked at {}: {}",
-            location, payload
-        );
+        eprintln!("PANIC: WAF agent panicked at {}: {}", location, payload);
 
         // Also try to log via tracing if available
         error!(
@@ -277,10 +279,7 @@ async fn main() -> Result<()> {
         .json()
         .init();
 
-    info!(
-        version = VERSION,
-        "Starting Zentinel WAF Agent"
-    );
+    info!(version = VERSION, "Starting Zentinel WAF Agent");
 
     // Setup signal handlers for graceful shutdown
     setup_signal_handlers();

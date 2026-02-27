@@ -5,12 +5,12 @@
 pub mod rule;
 
 // Rule category modules
-pub mod sqli;
-pub mod xss;
 pub mod injection;
-pub mod traversal;
 pub mod protocol;
 pub mod scanner;
+pub mod sqli;
+pub mod traversal;
+pub mod xss;
 
 pub use rule::{AttackType, Confidence, Rule, RuleBuilder, Severity, Target};
 
@@ -64,12 +64,18 @@ pub fn get_rule(rules: &[Rule], id: u32) -> Option<&Rule> {
 
 /// Get rules by attack type
 pub fn get_rules_by_type(rules: &[Rule], attack_type: AttackType) -> Vec<&Rule> {
-    rules.iter().filter(|r| r.attack_type == attack_type).collect()
+    rules
+        .iter()
+        .filter(|r| r.attack_type == attack_type)
+        .collect()
 }
 
 /// Get rules by tag
 pub fn get_rules_by_tag<'a>(rules: &'a [Rule], tag: &str) -> Vec<&'a Rule> {
-    rules.iter().filter(|r| r.tags.contains(&tag.to_string())).collect()
+    rules
+        .iter()
+        .filter(|r| r.tags.contains(&tag.to_string()))
+        .collect()
 }
 
 /// Filter rules by selectors

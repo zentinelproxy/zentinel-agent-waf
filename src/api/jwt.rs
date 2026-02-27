@@ -105,22 +105,25 @@ impl JwtInspector {
         let mut detections = Vec::new();
 
         // Check for "none" algorithm
-        if self.config.block_none_algorithm {
-            if header.contains(r#""alg":"none""#)
+        if self.config.block_none_algorithm
+            && (header.contains(r#""alg":"none""#)
                 || header.contains(r#""alg": "none""#)
                 || header.contains(r#""alg":"None""#)
-                || header.contains(r#""alg":"NONE""#)
-            {
-                detections.push(Detection {
-                    rule_id: 98200,
-                    rule_name: "JWT None Algorithm Attack".to_string(),
-                    attack_type: AttackType::ProtocolAttack,
-                    matched_value: truncate(token, 50),
-                    location: "header:Authorization".to_string(),
-                    base_score: 9,
-                    tags: vec!["jwt".to_string(), "algorithm".to_string(), "none".to_string()],
-                });
-            }
+                || header.contains(r#""alg":"NONE""#))
+        {
+            detections.push(Detection {
+                rule_id: 98200,
+                rule_name: "JWT None Algorithm Attack".to_string(),
+                attack_type: AttackType::ProtocolAttack,
+                matched_value: truncate(token, 50),
+                location: "header:Authorization".to_string(),
+                base_score: 9,
+                tags: vec![
+                    "jwt".to_string(),
+                    "algorithm".to_string(),
+                    "none".to_string(),
+                ],
+            });
         }
 
         // Check for weak algorithms
@@ -137,7 +140,11 @@ impl JwtInspector {
                         matched_value: truncate(token, 50),
                         location: "header:Authorization".to_string(),
                         base_score: 6,
-                        tags: vec!["jwt".to_string(), "algorithm".to_string(), "weak".to_string()],
+                        tags: vec![
+                            "jwt".to_string(),
+                            "algorithm".to_string(),
+                            "weak".to_string(),
+                        ],
                     });
                     break;
                 }
@@ -223,13 +230,7 @@ impl JwtInspector {
         }
 
         // Check for injection in claims
-        let injection_patterns = [
-            "<script",
-            "javascript:",
-            "' OR ",
-            "\" OR ",
-            "; DROP ",
-        ];
+        let injection_patterns = ["<script", "javascript:", "' OR ", "\" OR ", "; DROP "];
 
         for pattern in injection_patterns {
             if payload.to_lowercase().contains(&pattern.to_lowercase()) {
@@ -276,7 +277,9 @@ fn extract_exp_claim(payload: &str) -> Option<u64> {
     for pattern in exp_patterns {
         if let Some(start) = payload.find(pattern) {
             let after_key = &payload[start + pattern.len()..];
-            let end = after_key.find(|c: char| !c.is_ascii_digit()).unwrap_or(after_key.len());
+            let end = after_key
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(after_key.len());
             if let Ok(exp) = after_key[..end].parse::<u64>() {
                 return Some(exp);
             }
@@ -338,7 +341,9 @@ mod tests {
 
         let detections = inspector.inspect(&format!("Bearer {}", rs256_jwt));
         // Should not detect none algorithm or weak algorithm
-        assert!(!detections.iter().any(|d| d.rule_id == 98200 || d.rule_id == 98201));
+        assert!(!detections
+            .iter()
+            .any(|d| d.rule_id == 98200 || d.rule_id == 98201));
     }
 
     #[test]

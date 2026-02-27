@@ -63,7 +63,8 @@ impl RequestHistory {
 
     fn add_request(&mut self, now: Instant, max_size: usize, window_duration: Duration) {
         // Remove old entries
-        self.timestamps.retain(|t| now.duration_since(*t) < window_duration);
+        self.timestamps
+            .retain(|t| now.duration_since(*t) < window_duration);
 
         // Add new timestamp
         if self.timestamps.len() < max_size {
@@ -128,12 +129,14 @@ impl TimingAnalyzer {
         let window_duration = Duration::from_secs(self.config.window_duration_secs);
 
         // Get or create history for this IP
-        let history = self.history
+        let history = self
+            .history
             .entry(source_ip.to_string())
             .or_insert_with(RequestHistory::new);
 
         // Check interval since last request
-        let interval_info = history.time_since_last(now)
+        let interval_info = history
+            .time_since_last(now)
             .map(|interval| interval.as_millis() as u64);
 
         // Handle the different cases
@@ -182,10 +185,11 @@ impl TimingAnalyzer {
         let variance = intervals_ms
             .iter()
             .map(|&x| {
-                let diff = if x > mean { x - mean } else { mean - x };
+                let diff = x.abs_diff(mean);
                 diff * diff
             })
-            .sum::<u64>() / intervals_ms.len() as u64;
+            .sum::<u64>()
+            / intervals_ms.len() as u64;
 
         let std_dev = (variance as f64).sqrt() as u64;
 
@@ -209,8 +213,7 @@ impl TimingAnalyzer {
             Some(TimingDetection {
                 reason: format!(
                     "Request burst: {} requests in {}s window",
-                    request_count,
-                    self.config.window_duration_secs
+                    request_count, self.config.window_duration_secs
                 ),
                 score: 50,
             })
@@ -224,7 +227,8 @@ impl TimingAnalyzer {
         let window_duration = Duration::from_secs(self.config.window_duration_secs * 2);
 
         self.history.retain(|_, history| {
-            history.last_request
+            history
+                .last_request
                 .map(|last| now.duration_since(last) < window_duration)
                 .unwrap_or(false)
         });

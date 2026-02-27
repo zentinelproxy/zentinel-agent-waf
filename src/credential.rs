@@ -199,7 +199,10 @@ impl CredentialProtection {
     /// Check if a path is a login endpoint
     pub fn is_login_path(&self, path: &str) -> bool {
         let path_lower = path.to_lowercase();
-        self.config.login_paths.iter().any(|p| path_lower.starts_with(p))
+        self.config
+            .login_paths
+            .iter()
+            .any(|p| path_lower.starts_with(p))
     }
 
     /// Record a login attempt and check for attacks
@@ -219,7 +222,8 @@ impl CredentialProtection {
         let mut detections = Vec::new();
 
         // Get or create IP tracker
-        let ip_tracker = self.ip_trackers
+        let ip_tracker = self
+            .ip_trackers
             .entry(ip.to_string())
             .or_insert_with(IpTracker::new);
 
@@ -232,7 +236,8 @@ impl CredentialProtection {
         ip_tracker.record_attempt(username, success);
 
         // Get or create user tracker
-        let user_tracker = self.user_trackers
+        let user_tracker = self
+            .user_trackers
             .entry(username.to_string())
             .or_insert_with(UserTracker::new);
 
@@ -245,115 +250,125 @@ impl CredentialProtection {
         user_tracker.record_attempt(ip, success);
 
         // Check velocity per IP
-        if self.config.velocity_detection && !success {
-            if ip_tracker.failure_count > self.config.max_failures_per_ip {
-                detections.push(Detection {
-                    rule_id: 96001,
-                    rule_name: "Credential Stuffing: IP Rate Limit".to_string(),
-                    attack_type: AttackType::ProtocolAttack,
-                    matched_value: format!(
-                        "IP {} exceeded {} failures",
-                        ip, self.config.max_failures_per_ip
-                    ),
-                    location: "login".to_string(),
-                    base_score: 7,
-                    tags: vec!["credential-stuffing".to_string(), "rate-limit".to_string()],
-                });
+        if self.config.velocity_detection
+            && !success
+            && ip_tracker.failure_count > self.config.max_failures_per_ip
+        {
+            detections.push(Detection {
+                rule_id: 96001,
+                rule_name: "Credential Stuffing: IP Rate Limit".to_string(),
+                attack_type: AttackType::ProtocolAttack,
+                matched_value: format!(
+                    "IP {} exceeded {} failures",
+                    ip, self.config.max_failures_per_ip
+                ),
+                location: "login".to_string(),
+                base_score: 7,
+                tags: vec!["credential-stuffing".to_string(), "rate-limit".to_string()],
+            });
 
-                return (
-                    CredentialDecision::RateLimited {
-                        reason: format!(
-                            "Too many failed attempts from IP ({})",
-                            ip_tracker.failure_count
-                        ),
-                    },
-                    detections,
-                );
-            }
+            return (
+                CredentialDecision::RateLimited {
+                    reason: format!(
+                        "Too many failed attempts from IP ({})",
+                        ip_tracker.failure_count
+                    ),
+                },
+                detections,
+            );
         }
 
         // Check velocity per username
-        if self.config.velocity_detection && !success {
-            if user_tracker.failure_count > self.config.max_failures_per_user {
-                detections.push(Detection {
-                    rule_id: 96002,
-                    rule_name: "Credential Stuffing: User Rate Limit".to_string(),
-                    attack_type: AttackType::ProtocolAttack,
-                    matched_value: format!(
-                        "User {} exceeded {} failures",
-                        mask_username(username), self.config.max_failures_per_user
-                    ),
-                    location: "login".to_string(),
-                    base_score: 6,
-                    tags: vec!["credential-stuffing".to_string(), "user-rate-limit".to_string()],
-                });
+        if self.config.velocity_detection
+            && !success
+            && user_tracker.failure_count > self.config.max_failures_per_user
+        {
+            detections.push(Detection {
+                rule_id: 96002,
+                rule_name: "Credential Stuffing: User Rate Limit".to_string(),
+                attack_type: AttackType::ProtocolAttack,
+                matched_value: format!(
+                    "User {} exceeded {} failures",
+                    mask_username(username),
+                    self.config.max_failures_per_user
+                ),
+                location: "login".to_string(),
+                base_score: 6,
+                tags: vec![
+                    "credential-stuffing".to_string(),
+                    "user-rate-limit".to_string(),
+                ],
+            });
 
-                return (
-                    CredentialDecision::RateLimited {
-                        reason: format!(
-                            "Too many failed attempts for user ({})",
-                            user_tracker.failure_count
-                        ),
-                    },
-                    detections,
-                );
-            }
+            return (
+                CredentialDecision::RateLimited {
+                    reason: format!(
+                        "Too many failed attempts for user ({})",
+                        user_tracker.failure_count
+                    ),
+                },
+                detections,
+            );
         }
 
         // Check account enumeration (many usernames from one IP)
-        if self.config.enumeration_detection && !success {
-            if ip_tracker.usernames.len() > self.config.max_usernames_per_ip {
-                detections.push(Detection {
-                    rule_id: 96003,
-                    rule_name: "Account Enumeration Detected".to_string(),
-                    attack_type: AttackType::ProtocolAttack,
-                    matched_value: format!(
-                        "IP {} tried {} unique usernames",
-                        ip, ip_tracker.usernames.len()
-                    ),
-                    location: "login".to_string(),
-                    base_score: 8,
-                    tags: vec!["credential-stuffing".to_string(), "enumeration".to_string()],
-                });
+        if self.config.enumeration_detection
+            && !success
+            && ip_tracker.usernames.len() > self.config.max_usernames_per_ip
+        {
+            detections.push(Detection {
+                rule_id: 96003,
+                rule_name: "Account Enumeration Detected".to_string(),
+                attack_type: AttackType::ProtocolAttack,
+                matched_value: format!(
+                    "IP {} tried {} unique usernames",
+                    ip,
+                    ip_tracker.usernames.len()
+                ),
+                location: "login".to_string(),
+                base_score: 8,
+                tags: vec!["credential-stuffing".to_string(), "enumeration".to_string()],
+            });
 
-                return (
-                    CredentialDecision::AccountEnumeration {
-                        reason: format!(
-                            "Too many unique usernames from IP ({})",
-                            ip_tracker.usernames.len()
-                        ),
-                    },
-                    detections,
-                );
-            }
+            return (
+                CredentialDecision::AccountEnumeration {
+                    reason: format!(
+                        "Too many unique usernames from IP ({})",
+                        ip_tracker.usernames.len()
+                    ),
+                },
+                detections,
+            );
         }
 
         // Check distributed attack (one username from many IPs)
-        if self.config.distributed_detection && !success {
-            if user_tracker.ips.len() > self.config.max_ips_per_user {
-                detections.push(Detection {
-                    rule_id: 96004,
-                    rule_name: "Distributed Credential Attack".to_string(),
-                    attack_type: AttackType::ProtocolAttack,
-                    matched_value: format!(
-                        "User {} attacked from {} IPs",
-                        mask_username(username), user_tracker.ips.len()
-                    ),
-                    location: "login".to_string(),
-                    base_score: 9,
-                    tags: vec!["credential-stuffing".to_string(), "distributed".to_string()],
-                });
+        if self.config.distributed_detection
+            && !success
+            && user_tracker.ips.len() > self.config.max_ips_per_user
+        {
+            detections.push(Detection {
+                rule_id: 96004,
+                rule_name: "Distributed Credential Attack".to_string(),
+                attack_type: AttackType::ProtocolAttack,
+                matched_value: format!(
+                    "User {} attacked from {} IPs",
+                    mask_username(username),
+                    user_tracker.ips.len()
+                ),
+                location: "login".to_string(),
+                base_score: 9,
+                tags: vec!["credential-stuffing".to_string(), "distributed".to_string()],
+            });
 
-                return (
-                    CredentialDecision::DistributedAttack {
-                        reason: format!(
-                            "Distributed attack: {} IPs targeting user",
-                            user_tracker.ips.len()
-                        ),
-                    },
-                    detections,
-                );
-            }
+            return (
+                CredentialDecision::DistributedAttack {
+                    reason: format!(
+                        "Distributed attack: {} IPs targeting user",
+                        user_tracker.ips.len()
+                    ),
+                },
+                detections,
+            );
         }
 
         (CredentialDecision::Allow, detections)
@@ -361,8 +376,10 @@ impl CredentialProtection {
 
     /// Clean up expired trackers
     fn cleanup(&mut self, window: Duration) {
-        self.ip_trackers.retain(|_, tracker| !tracker.is_expired(window));
-        self.user_trackers.retain(|_, tracker| !tracker.is_expired(window));
+        self.ip_trackers
+            .retain(|_, tracker| !tracker.is_expired(window));
+        self.user_trackers
+            .retain(|_, tracker| !tracker.is_expired(window));
         self.last_cleanup = Instant::now();
     }
 
@@ -423,8 +440,14 @@ mod tests {
 
         // First few attempts should be allowed
         for i in 0..3 {
-            let (decision, _) = protection.check_attempt("192.168.1.1", &format!("user{}", i), false);
-            assert_eq!(decision, CredentialDecision::Allow, "Attempt {} should be allowed", i);
+            let (decision, _) =
+                protection.check_attempt("192.168.1.1", &format!("user{}", i), false);
+            assert_eq!(
+                decision,
+                CredentialDecision::Allow,
+                "Attempt {} should be allowed",
+                i
+            );
         }
 
         // Next attempt should be rate limited
@@ -444,7 +467,8 @@ mod tests {
 
         // First few attempts from different IPs should be allowed
         for i in 0..3 {
-            let (decision, _) = protection.check_attempt(&format!("192.168.1.{}", i), "target_user", false);
+            let (decision, _) =
+                protection.check_attempt(&format!("192.168.1.{}", i), "target_user", false);
             assert_eq!(decision, CredentialDecision::Allow);
         }
 
@@ -464,13 +488,17 @@ mod tests {
 
         // Try many usernames from one IP
         for i in 0..3 {
-            let (decision, _) = protection.check_attempt("192.168.1.1", &format!("user{}", i), false);
+            let (decision, _) =
+                protection.check_attempt("192.168.1.1", &format!("user{}", i), false);
             assert_eq!(decision, CredentialDecision::Allow);
         }
 
         // Next username should trigger enumeration detection
         let (decision, _) = protection.check_attempt("192.168.1.1", "user_new", false);
-        assert!(matches!(decision, CredentialDecision::AccountEnumeration { .. }));
+        assert!(matches!(
+            decision,
+            CredentialDecision::AccountEnumeration { .. }
+        ));
     }
 
     #[test]
@@ -485,13 +513,17 @@ mod tests {
 
         // Attack from many IPs
         for i in 0..3 {
-            let (decision, _) = protection.check_attempt(&format!("192.168.1.{}", i), "target", false);
+            let (decision, _) =
+                protection.check_attempt(&format!("192.168.1.{}", i), "target", false);
             assert_eq!(decision, CredentialDecision::Allow);
         }
 
         // Next IP should trigger distributed attack detection
         let (decision, _) = protection.check_attempt("192.168.1.100", "target", false);
-        assert!(matches!(decision, CredentialDecision::DistributedAttack { .. }));
+        assert!(matches!(
+            decision,
+            CredentialDecision::DistributedAttack { .. }
+        ));
     }
 
     #[test]

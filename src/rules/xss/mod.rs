@@ -24,7 +24,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .owasp("A03:2021-Injection")
             .tags(&["xss", "xss-script"])
             .build()?,
-
         RuleBuilder::new(941101, "XSS: Closing script tag")
             .description("Detects closing script tag")
             .attack_type(AttackType::Xss)
@@ -36,7 +35,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-script"])
             .build()?,
-
         RuleBuilder::new(941102, "XSS: Script src attribute")
             .description("Detects external script loading")
             .attack_type(AttackType::Xss)
@@ -48,7 +46,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-script"])
             .build()?,
-
         // Event handlers
         RuleBuilder::new(941110, "XSS: Event handler onerror")
             .description("Detects onerror event handler")
@@ -61,7 +58,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event"])
             .build()?,
-
         RuleBuilder::new(941111, "XSS: Event handler onload")
             .description("Detects onload event handler")
             .attack_type(AttackType::Xss)
@@ -73,7 +69,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event"])
             .build()?,
-
         RuleBuilder::new(941112, "XSS: Event handler onclick")
             .description("Detects onclick event handler")
             .attack_type(AttackType::Xss)
@@ -85,7 +80,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event"])
             .build()?,
-
         RuleBuilder::new(941113, "XSS: Event handler onmouseover")
             .description("Detects onmouseover event handler")
             .attack_type(AttackType::Xss)
@@ -97,7 +91,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event"])
             .build()?,
-
         RuleBuilder::new(941114, "XSS: Event handler onfocus onblur")
             .description("Detects focus-related event handlers")
             .attack_type(AttackType::Xss)
@@ -109,7 +102,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event"])
             .build()?,
-
         RuleBuilder::new(941115, "XSS: Generic event handler")
             .description("Detects any on* event handler")
             .attack_type(AttackType::Xss)
@@ -121,7 +113,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event"])
             .build()?,
-
         // JavaScript URLs
         RuleBuilder::new(941120, "XSS: javascript URI")
             .description("Detects javascript protocol URI")
@@ -134,7 +125,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-uri"])
             .build()?,
-
         RuleBuilder::new(941121, "XSS: vbscript URI")
             .description("Detects vbscript protocol URI")
             .attack_type(AttackType::Xss)
@@ -146,7 +136,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-uri"])
             .build()?,
-
         RuleBuilder::new(941122, "XSS: data URI with HTML")
             .description("Detects data URI with text/html")
             .attack_type(AttackType::Xss)
@@ -158,7 +147,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-uri"])
             .build()?,
-
         RuleBuilder::new(941123, "XSS: data URI base64")
             .description("Detects base64-encoded data URI")
             .attack_type(AttackType::Xss)
@@ -170,7 +158,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-uri"])
             .build()?,
-
         // Dangerous HTML tags
         RuleBuilder::new(941130, "XSS: iframe tag")
             .description("Detects iframe tag injection")
@@ -183,7 +170,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-tag"])
             .build()?,
-
         RuleBuilder::new(941131, "XSS: object embed tag")
             .description("Detects object or embed tag injection")
             .attack_type(AttackType::Xss)
@@ -195,7 +181,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-tag"])
             .build()?,
-
         RuleBuilder::new(941132, "XSS: SVG tag")
             .description("Detects SVG tag with potential JS")
             .attack_type(AttackType::Xss)
@@ -207,7 +192,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-tag", "xss-svg"])
             .build()?,
-
         RuleBuilder::new(941133, "XSS: math tag")
             .description("Detects math tag XSS vector")
             .attack_type(AttackType::Xss)
@@ -219,7 +203,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-tag"])
             .build()?,
-
         RuleBuilder::new(941134, "XSS: img tag with onerror")
             .description("Detects img tag XSS vector")
             .attack_type(AttackType::Xss)
@@ -231,7 +214,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-tag", "xss-event"])
             .build()?,
-
         RuleBuilder::new(941135, "XSS: body tag with onload")
             .description("Detects body tag XSS vector")
             .attack_type(AttackType::Xss)
@@ -243,7 +225,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-tag", "xss-event"])
             .build()?,
-
         // CSS-based XSS
         RuleBuilder::new(941140, "XSS: CSS expression")
             .description("Detects CSS expression injection")
@@ -256,7 +237,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-css"])
             .build()?,
-
         RuleBuilder::new(941141, "XSS: CSS behavior")
             .description("Detects CSS behavior injection")
             .attack_type(AttackType::Xss)
@@ -268,7 +248,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-css"])
             .build()?,
-
         RuleBuilder::new(941142, "XSS: CSS moz-binding")
             .description("Detects Firefox XBL binding injection")
             .attack_type(AttackType::Xss)
@@ -280,7 +259,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-css"])
             .build()?,
-
         RuleBuilder::new(941143, "XSS: style tag")
             .description("Detects style tag injection")
             .attack_type(AttackType::Xss)
@@ -292,7 +270,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-css"])
             .build()?,
-
         // DOM-based XSS
         RuleBuilder::new(941150, "XSS: document.write")
             .description("Detects document.write DOM sink")
@@ -305,7 +282,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom"])
             .build()?,
-
         RuleBuilder::new(941151, "XSS: innerHTML")
             .description("Detects innerHTML DOM sink")
             .attack_type(AttackType::Xss)
@@ -317,7 +293,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom"])
             .build()?,
-
         RuleBuilder::new(941152, "XSS: eval function")
             .description("Detects eval function call")
             .attack_type(AttackType::Xss)
@@ -329,7 +304,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom", "rce"])
             .build()?,
-
         RuleBuilder::new(941153, "XSS: setTimeout setInterval with string")
             .description("Detects timer functions with string code")
             .attack_type(AttackType::Xss)
@@ -341,7 +315,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom"])
             .build()?,
-
         RuleBuilder::new(941154, "XSS: Function constructor")
             .description("Detects Function constructor for code execution")
             .attack_type(AttackType::Xss)
@@ -353,7 +326,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom", "rce"])
             .build()?,
-
         // Polyglot payloads
         RuleBuilder::new(941160, "XSS: Polyglot jaVasCript")
             .description("Detects case-mixed javascript obfuscation")
@@ -366,7 +338,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-evasion"])
             .build()?,
-
         RuleBuilder::new(941161, "XSS: HTML entity encoding")
             .description("Detects HTML entity encoded XSS")
             .attack_type(AttackType::Xss)
@@ -378,7 +349,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-encoded"])
             .build()?,
-
         RuleBuilder::new(941162, "XSS: Unicode encoding")
             .description("Detects Unicode encoded XSS")
             .attack_type(AttackType::Xss)
@@ -390,7 +360,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-encoded"])
             .build()?,
-
         // Alert/confirm/prompt (useful for testing)
         RuleBuilder::new(941170, "XSS: alert function")
             .description("Detects alert function")
@@ -403,7 +372,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-test"])
             .build()?,
-
         RuleBuilder::new(941171, "XSS: confirm prompt function")
             .description("Detects confirm/prompt functions")
             .attack_type(AttackType::Xss)
@@ -415,11 +383,9 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-test"])
             .build()?,
-
         // =================================================================
         // Paranoia Level 3 Rules (Low Confidence)
         // =================================================================
-
         RuleBuilder::new(941180, "XSS: Null byte obfuscation")
             .description("Detects null byte in script-related content")
             .attack_type(AttackType::Xss)
@@ -431,7 +397,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(941181, "XSS: Tab/newline obfuscation")
             .description("Detects tab/newline obfuscation in script tags")
             .attack_type(AttackType::Xss)
@@ -443,7 +408,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(941182, "XSS: Backtick template literals")
             .description("Detects template literal code execution")
             .attack_type(AttackType::Xss)
@@ -455,7 +419,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom", "pl3"])
             .build()?,
-
         RuleBuilder::new(941183, "XSS: Constructor property access")
             .description("Detects constructor.constructor pattern")
             .attack_type(AttackType::Xss)
@@ -467,7 +430,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom", "pl3"])
             .build()?,
-
         RuleBuilder::new(941184, "XSS: Proto pollution")
             .description("Detects __proto__ manipulation")
             .attack_type(AttackType::Xss)
@@ -479,7 +441,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom", "pl3"])
             .build()?,
-
         RuleBuilder::new(941185, "XSS: atob/btoa functions")
             .description("Detects base64 encode/decode for obfuscation")
             .attack_type(AttackType::Xss)
@@ -491,7 +452,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(941186, "XSS: fromCharCode")
             .description("Detects String.fromCharCode for obfuscation")
             .attack_type(AttackType::Xss)
@@ -503,7 +463,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(941187, "XSS: Less common event handlers")
             .description("Detects obscure event handlers")
             .attack_type(AttackType::Xss)
@@ -515,7 +474,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event", "pl3"])
             .build()?,
-
         RuleBuilder::new(941188, "XSS: SVG animate/set elements")
             .description("Detects SVG animation-based XSS")
             .attack_type(AttackType::Xss)
@@ -527,7 +485,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-svg", "pl3"])
             .build()?,
-
         RuleBuilder::new(941189, "XSS: Document/window/location access")
             .description("Detects potentially dangerous object access")
             .attack_type(AttackType::Xss)
@@ -539,11 +496,9 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-dom", "pl3"])
             .build()?,
-
         // =================================================================
         // Paranoia Level 4 Rules (Maximum Sensitivity)
         // =================================================================
-
         RuleBuilder::new(941190, "XSS: Any angle bracket")
             .description("Detects any HTML tag-like pattern")
             .attack_type(AttackType::Xss)
@@ -555,7 +510,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(941191, "XSS: Closing angle bracket after equals")
             .description("Detects attribute injection patterns")
             .attack_type(AttackType::Xss)
@@ -567,7 +521,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(941192, "XSS: Script-like word")
             .description("Detects script-related keywords anywhere")
             .attack_type(AttackType::Xss)
@@ -579,7 +532,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(941193, "XSS: Parentheses after word")
             .description("Detects function-call-like patterns")
             .attack_type(AttackType::Xss)
@@ -591,7 +543,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(941194, "XSS: Encoded angle bracket")
             .description("Detects any encoded angle bracket")
             .attack_type(AttackType::Xss)
@@ -603,7 +554,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-encoded", "pl4"])
             .build()?,
-
         RuleBuilder::new(941195, "XSS: On-prefix word")
             .description("Detects any word starting with 'on'")
             .attack_type(AttackType::Xss)
@@ -615,7 +565,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-event", "pl4"])
             .build()?,
-
         RuleBuilder::new(941196, "XSS: Colon after protocol-like word")
             .description("Detects potential URI schemes")
             .attack_type(AttackType::Xss)
@@ -627,7 +576,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-uri", "pl4"])
             .build()?,
-
         RuleBuilder::new(941197, "XSS: Quote followed by event")
             .description("Detects attribute breakout attempts")
             .attack_type(AttackType::Xss)
@@ -639,7 +587,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-evasion", "pl4"])
             .build()?,
-
         RuleBuilder::new(941198, "XSS: Ampersand hash sequence")
             .description("Detects numeric character references")
             .attack_type(AttackType::Xss)
@@ -651,7 +598,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(79)
             .tags(&["xss", "xss-encoded", "pl4"])
             .build()?,
-
         RuleBuilder::new(941199, "XSS: SVG/Math namespace")
             .description("Detects SVG or math content")
             .attack_type(AttackType::Xss)

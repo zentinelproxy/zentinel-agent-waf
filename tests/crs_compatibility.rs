@@ -6,7 +6,7 @@
 //! Note: Some tests are marked with #[ignore] because they require
 //! additional rule coverage that is planned for future releases.
 
-use zentinel_agent_waf::{WafConfig, WafEngine, Detection};
+use zentinel_agent_waf::{Detection, WafConfig, WafEngine};
 
 fn create_engine() -> WafEngine {
     WafEngine::new(WafConfig::default()).expect("Failed to create engine")
@@ -54,11 +54,7 @@ mod crs_942_sqli {
     #[test]
     fn test_942140_db_names() {
         let engine = create_engine();
-        let payloads = vec![
-            "information_schema",
-            "sys.tables",
-            "mysql.user",
-        ];
+        let payloads = vec!["information_schema", "sys.tables", "mysql.user"];
 
         for payload in payloads {
             let query = format!("' UNION SELECT * FROM {}", payload);
@@ -75,11 +71,7 @@ mod crs_942_sqli {
     #[test]
     fn test_942200_functions() {
         let engine = create_engine();
-        let payloads = vec![
-            "SLEEP(",
-            "WAITFOR DELAY",
-            "BENCHMARK(",
-        ];
+        let payloads = vec!["SLEEP(", "WAITFOR DELAY", "BENCHMARK("];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -95,10 +87,7 @@ mod crs_942_sqli {
     #[test]
     fn test_942300_keywords() {
         let engine = create_engine();
-        let payloads = vec![
-            "UNION SELECT",
-            "UNION ALL SELECT",
-        ];
+        let payloads = vec!["UNION SELECT", "UNION ALL SELECT"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -162,9 +151,7 @@ mod crs_941_xss {
     #[test]
     fn test_941130_javascript_uri() {
         let engine = create_engine();
-        let payloads = vec![
-            "javascript:alert(1)",
-        ];
+        let payloads = vec!["javascript:alert(1)"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -181,11 +168,7 @@ mod crs_941_xss {
     #[ignore = "Requires additional DOM method rules - planned for future"]
     fn test_941180_dom_methods() {
         let engine = create_engine();
-        let payloads = vec![
-            "document.cookie",
-            "document.write(",
-            "eval(",
-        ];
+        let payloads = vec!["document.cookie", "document.write(", "eval("];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -209,10 +192,7 @@ mod crs_930_lfi {
     #[test]
     fn test_930100_path_traversal() {
         let engine = create_engine();
-        let payloads = vec![
-            "../../../etc/passwd",
-            "....//....//etc/passwd",
-        ];
+        let payloads = vec!["../../../etc/passwd", "....//....//etc/passwd"];
 
         for payload in payloads {
             let detections = engine.check(payload, "path");
@@ -228,10 +208,7 @@ mod crs_930_lfi {
     #[test]
     fn test_930120_os_files() {
         let engine = create_engine();
-        let payloads = vec![
-            "/etc/passwd",
-            "/etc/shadow",
-        ];
+        let payloads = vec!["/etc/passwd", "/etc/shadow"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -255,12 +232,7 @@ mod crs_932_rce {
     #[test]
     fn test_932100_unix_injection() {
         let engine = create_engine();
-        let payloads = vec![
-            ";cat /etc/passwd",
-            "|id",
-            "$(id)",
-            "`id`",
-        ];
+        let payloads = vec![";cat /etc/passwd", "|id", "$(id)", "`id`"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -284,11 +256,7 @@ mod crs_913_scanners {
     #[test]
     fn test_913100_scanner_ua() {
         let engine = create_engine();
-        let scanners = vec![
-            "sqlmap/1.0-dev",
-            "Nikto/2.1.6",
-            "Nmap Scripting Engine",
-        ];
+        let scanners = vec!["sqlmap/1.0-dev", "Nikto/2.1.6", "Nmap Scripting Engine"];
 
         for ua in scanners {
             let detections = engine.check(ua, "header:User-Agent");
@@ -312,10 +280,7 @@ mod crs_934_ssti {
     #[test]
     fn test_934100_ssti() {
         let engine = create_engine();
-        let payloads = vec![
-            "{{7*7}}",
-            "${7*7}",
-        ];
+        let payloads = vec!["{{7*7}}", "${7*7}"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -347,7 +312,10 @@ mod paranoia_levels {
         let engine = create_paranoid_engine(2);
         // PL2 detects environment variable patterns
         let detections = engine.check("${PATH}", "query");
-        assert!(has_detection(&detections), "PL2 should catch env var patterns");
+        assert!(
+            has_detection(&detections),
+            "PL2 should catch env var patterns"
+        );
     }
 
     #[test]
@@ -355,7 +323,10 @@ mod paranoia_levels {
         let engine = create_paranoid_engine(3);
         // PL3 catches null byte obfuscation
         let detections = engine.check("scr\x00ipt", "query");
-        assert!(has_detection(&detections), "PL3 should catch null byte XSS evasion");
+        assert!(
+            has_detection(&detections),
+            "PL3 should catch null byte XSS evasion"
+        );
     }
 
     #[test]
@@ -371,7 +342,10 @@ mod paranoia_levels {
         let engine = create_paranoid_engine(4);
         // PL4 catches any angle bracket with letter
         let detections = engine.check("<a", "query");
-        assert!(has_detection(&detections), "PL4 should catch any angle bracket");
+        assert!(
+            has_detection(&detections),
+            "PL4 should catch any angle bracket"
+        );
     }
 
     #[test]
@@ -387,7 +361,10 @@ mod paranoia_levels {
         let engine = create_paranoid_engine(4);
         // PL4 catches any double dot
         let detections = engine.check("file..txt", "query");
-        assert!(has_detection(&detections), "PL4 should catch any double dot");
+        assert!(
+            has_detection(&detections),
+            "PL4 should catch any double dot"
+        );
     }
 
     #[test]
@@ -395,7 +372,10 @@ mod paranoia_levels {
         let engine = create_paranoid_engine(4);
         // PL4 catches any double brace
         let detections = engine.check("Hello {{ name }}", "query");
-        assert!(has_detection(&detections), "PL4 should catch any double brace");
+        assert!(
+            has_detection(&detections),
+            "PL4 should catch any double brace"
+        );
     }
 
     #[test]
@@ -411,13 +391,36 @@ mod paranoia_levels {
         let count3 = engine3.rule_count();
         let count4 = engine4.rule_count();
 
-        assert!(count2 >= count1, "PL2 should have >= rules than PL1: {} vs {}", count2, count1);
-        assert!(count3 >= count2, "PL3 should have >= rules than PL2: {} vs {}", count3, count2);
-        assert!(count4 >= count3, "PL4 should have >= rules than PL3: {} vs {}", count4, count3);
+        assert!(
+            count2 >= count1,
+            "PL2 should have >= rules than PL1: {} vs {}",
+            count2,
+            count1
+        );
+        assert!(
+            count3 >= count2,
+            "PL3 should have >= rules than PL2: {} vs {}",
+            count3,
+            count2
+        );
+        assert!(
+            count4 >= count3,
+            "PL4 should have >= rules than PL3: {} vs {}",
+            count4,
+            count3
+        );
 
         // Check we have meaningful coverage at each level
-        assert!(count1 >= 140, "PL1 should have at least 140 rules, got {}", count1);
-        assert!(count4 >= 280, "PL4 should have at least 280 rules, got {}", count4);
+        assert!(
+            count1 >= 140,
+            "PL1 should have at least 140 rules, got {}",
+            count1
+        );
+        assert!(
+            count4 >= 280,
+            "PL4 should have at least 280 rules, got {}",
+            count4
+        );
     }
 }
 
@@ -431,10 +434,7 @@ mod evasion {
     #[test]
     fn test_case_variations() {
         let engine = create_engine();
-        let payloads = vec![
-            "SELECT * FROM users",
-            "sElEcT * fRoM users",
-        ];
+        let payloads = vec!["SELECT * FROM users", "sElEcT * fRoM users"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");
@@ -449,10 +449,7 @@ mod evasion {
     #[test]
     fn test_comment_injection() {
         let engine = create_engine();
-        let payloads = vec![
-            "UN/**/ION/**/SEL/**/ECT",
-            "UNION/*comment*/SELECT",
-        ];
+        let payloads = vec!["UN/**/ION/**/SEL/**/ECT", "UNION/*comment*/SELECT"];
 
         for payload in payloads {
             let detections = engine.check(payload, "query");

@@ -55,9 +55,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 use zentinel_agent_protocol::{
-    AgentResponse, AuditMetadata, HeaderOp, RequestBodyChunkEvent,
-    RequestHeadersEvent, ResponseBodyChunkEvent, ResponseHeadersEvent, WebSocketFrameEvent,
-    EventType,
+    AgentResponse, AuditMetadata, EventType, HeaderOp, RequestBodyChunkEvent, RequestHeadersEvent,
+    ResponseBodyChunkEvent, ResponseHeadersEvent, WebSocketFrameEvent,
 };
 
 use zentinel_agent_protocol::v2::{
@@ -172,8 +171,12 @@ impl WafMetrics {
         match attack_type {
             AttackType::SqlInjection => self.detections_sqli.fetch_add(1, Ordering::Relaxed),
             AttackType::Xss => self.detections_xss.fetch_add(1, Ordering::Relaxed),
-            AttackType::PathTraversal => self.detections_path_traversal.fetch_add(1, Ordering::Relaxed),
-            AttackType::CommandInjection => self.detections_command_injection.fetch_add(1, Ordering::Relaxed),
+            AttackType::PathTraversal => self
+                .detections_path_traversal
+                .fetch_add(1, Ordering::Relaxed),
+            AttackType::CommandInjection => self
+                .detections_command_injection
+                .fetch_add(1, Ordering::Relaxed),
             _ => self.detections_other.fetch_add(1, Ordering::Relaxed),
         };
     }
@@ -218,10 +221,8 @@ impl WafAgent {
         let mut status = HealthStatus::default();
 
         // Check engine lock is acquirable
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            self.engine.read(),
-        ).await {
+        match tokio::time::timeout(std::time::Duration::from_millis(100), self.engine.read()).await
+        {
             Ok(engine) => {
                 status.engine_ok = true;
                 status.rule_count = engine.rules().len();
@@ -237,24 +238,32 @@ impl WafAgent {
         match tokio::time::timeout(
             std::time::Duration::from_millis(50),
             self.pending_request_bodies.read(),
-        ).await {
+        )
+        .await
+        {
             Ok(pending) => {
                 status.pending_requests = pending.len();
             }
             Err(_) => {
-                status.issues.push("Request bodies lock timeout".to_string());
+                status
+                    .issues
+                    .push("Request bodies lock timeout".to_string());
             }
         }
 
         match tokio::time::timeout(
             std::time::Duration::from_millis(50),
             self.pending_response_bodies.read(),
-        ).await {
+        )
+        .await
+        {
             Ok(pending) => {
                 status.pending_responses = pending.len();
             }
             Err(_) => {
-                status.issues.push("Response bodies lock timeout".to_string());
+                status
+                    .issues
+                    .push("Response bodies lock timeout".to_string());
             }
         }
 
@@ -295,7 +304,11 @@ impl WafAgent {
 
         // Log detections
         for detection in &detections {
-            let level = if decision.is_block() { "BLOCK" } else { "DETECT" };
+            let level = if decision.is_block() {
+                "BLOCK"
+            } else {
+                "DETECT"
+            };
             warn!(
                 rule_id = detection.rule_id,
                 rule_name = %detection.rule_name,
@@ -425,39 +438,55 @@ impl AgentHandlerV2 for WafAgent {
             "waf_detections_total",
             self.metrics.detections_sqli.load(Ordering::Relaxed),
         );
-        sqli_counter.labels.insert("attack_type".to_string(), "sqli".to_string());
+        sqli_counter
+            .labels
+            .insert("attack_type".to_string(), "sqli".to_string());
         report.counters.push(sqli_counter);
 
         let mut xss_counter = CounterMetric::new(
             "waf_detections_total",
             self.metrics.detections_xss.load(Ordering::Relaxed),
         );
-        xss_counter.labels.insert("attack_type".to_string(), "xss".to_string());
+        xss_counter
+            .labels
+            .insert("attack_type".to_string(), "xss".to_string());
         report.counters.push(xss_counter);
 
         let mut path_traversal_counter = CounterMetric::new(
             "waf_detections_total",
-            self.metrics.detections_path_traversal.load(Ordering::Relaxed),
+            self.metrics
+                .detections_path_traversal
+                .load(Ordering::Relaxed),
         );
-        path_traversal_counter.labels.insert("attack_type".to_string(), "path_traversal".to_string());
+        path_traversal_counter
+            .labels
+            .insert("attack_type".to_string(), "path_traversal".to_string());
         report.counters.push(path_traversal_counter);
 
         let mut cmd_injection_counter = CounterMetric::new(
             "waf_detections_total",
-            self.metrics.detections_command_injection.load(Ordering::Relaxed),
+            self.metrics
+                .detections_command_injection
+                .load(Ordering::Relaxed),
         );
-        cmd_injection_counter.labels.insert("attack_type".to_string(), "command_injection".to_string());
+        cmd_injection_counter
+            .labels
+            .insert("attack_type".to_string(), "command_injection".to_string());
         report.counters.push(cmd_injection_counter);
 
         let mut other_counter = CounterMetric::new(
             "waf_detections_total",
             self.metrics.detections_other.load(Ordering::Relaxed),
         );
-        other_counter.labels.insert("attack_type".to_string(), "other".to_string());
+        other_counter
+            .labels
+            .insert("attack_type".to_string(), "other".to_string());
         report.counters.push(other_counter);
 
         // Add gauge for current score (placeholder - would need to track per-request)
-        report.gauges.push(GaugeMetric::new("waf_current_score", 0.0));
+        report
+            .gauges
+            .push(GaugeMetric::new("waf_current_score", 0.0));
 
         Some(report)
     }
@@ -468,13 +497,14 @@ impl AgentHandlerV2 for WafAgent {
         debug!(config = ?config, "Configuration content");
 
         // Parse the JSON config
-        let json_config: WafConfigJson = match serde_json::from_value::<WafConfigJson>(config.clone()) {
-            Ok(c) => c,
-            Err(e) => {
-                warn!(error = %e, "Failed to parse WAF configuration");
-                return false;
-            }
-        };
+        let json_config: WafConfigJson =
+            match serde_json::from_value::<WafConfigJson>(config.clone()) {
+                Ok(c) => c,
+                Err(e) => {
+                    warn!(error = %e, "Failed to parse WAF configuration");
+                    return false;
+                }
+            };
 
         // Convert to WafConfig and reconfigure
         let new_config: WafConfig = json_config.into();
@@ -570,13 +600,17 @@ impl AgentHandlerV2 for WafAgent {
 
         // Get or create inspection state
         // Use streaming mode if enabled and this is the first chunk
-        let state = pending.entry(event.correlation_id.clone()).or_insert_with(|| {
-            if engine.config.streaming.enabled {
-                BodyInspectionState::Streaming(streaming::StreamingInspector::new(&engine.config.streaming))
-            } else {
-                BodyInspectionState::Buffered(BodyAccumulator::default())
-            }
-        });
+        let state = pending
+            .entry(event.correlation_id.clone())
+            .or_insert_with(|| {
+                if engine.config.streaming.enabled {
+                    BodyInspectionState::Streaming(streaming::StreamingInspector::new(
+                        &engine.config.streaming,
+                    ))
+                } else {
+                    BodyInspectionState::Buffered(BodyAccumulator::default())
+                }
+            });
 
         match state {
             BodyInspectionState::Buffered(accumulator) => {
@@ -597,7 +631,9 @@ impl AgentHandlerV2 for WafAgent {
 
                 // If this is the last chunk, inspect the full body
                 if event.is_last {
-                    if let Some(BodyInspectionState::Buffered(body_data)) = pending.remove(&event.correlation_id) {
+                    if let Some(BodyInspectionState::Buffered(body_data)) =
+                        pending.remove(&event.correlation_id)
+                    {
                         let body_str = String::from_utf8_lossy(&body_data.data);
 
                         debug!(
@@ -607,7 +643,8 @@ impl AgentHandlerV2 for WafAgent {
                         );
 
                         let detections = engine.check(&body_str, "body");
-                        let (decision, detections) = self.make_decision(&engine, detections, "body");
+                        let (decision, detections) =
+                            self.make_decision(&engine, detections, "body");
                         return self.build_response(
                             decision,
                             &detections,
@@ -634,11 +671,16 @@ impl AgentHandlerV2 for WafAgent {
                                 score = streaming_result.score.total,
                                 "Early termination - body inspection complete"
                             );
-                            let (decision, detections) = self.make_decision(&engine, streaming_result.detections, "body");
+                            let (decision, detections) =
+                                self.make_decision(&engine, streaming_result.detections, "body");
                             return self.build_response(
                                 decision,
                                 &detections,
-                                vec!["waf".to_string(), "body".to_string(), "streaming".to_string()],
+                                vec![
+                                    "waf".to_string(),
+                                    "body".to_string(),
+                                    "streaming".to_string(),
+                                ],
                             );
                         }
                     }
@@ -670,7 +712,9 @@ impl AgentHandlerV2 for WafAgent {
 
                 // If this is the last chunk, finalize and make decision
                 if event.is_last {
-                    if let Some(BodyInspectionState::Streaming(inspector)) = pending.remove(&event.correlation_id) {
+                    if let Some(BodyInspectionState::Streaming(inspector)) =
+                        pending.remove(&event.correlation_id)
+                    {
                         let streaming_result = inspector.finalize();
 
                         debug!(
@@ -682,11 +726,16 @@ impl AgentHandlerV2 for WafAgent {
                             "Streaming body inspection complete"
                         );
 
-                        let (decision, detections) = self.make_decision(&engine, streaming_result.detections, "body");
+                        let (decision, detections) =
+                            self.make_decision(&engine, streaming_result.detections, "body");
                         return self.build_response(
                             decision,
                             &detections,
-                            vec!["waf".to_string(), "body".to_string(), "streaming".to_string()],
+                            vec![
+                                "waf".to_string(),
+                                "body".to_string(),
+                                "streaming".to_string(),
+                            ],
                         );
                     }
                 }
@@ -870,7 +919,8 @@ impl AgentHandlerV2 for WafAgent {
             });
 
             // Check accumulated size
-            if accumulator.data.len() + frame_data.len() > engine.config.websocket.max_message_size {
+            if accumulator.data.len() + frame_data.len() > engine.config.websocket.max_message_size
+            {
                 warn!(
                     correlation_id = %event.correlation_id,
                     accumulated_size = accumulator.data.len(),
@@ -960,7 +1010,11 @@ impl AgentHandlerV2 for WafAgent {
 
         // Log detections
         for detection in &detections {
-            let level = if decision.is_block() { "BLOCK" } else { "DETECT" };
+            let level = if decision.is_block() {
+                "BLOCK"
+            } else {
+                "DETECT"
+            };
             warn!(
                 correlation_id = %event.correlation_id,
                 rule_id = detection.rule_id,
@@ -995,9 +1049,7 @@ impl AgentHandlerV2 for WafAgent {
                 engine.config.websocket.block_close_code,
                 format!(
                     "{}: rule {} ({})",
-                    engine.config.websocket.block_close_reason,
-                    first_rule,
-                    attack_type
+                    engine.config.websocket.block_close_reason, first_rule, attack_type
                 ),
             )
             .with_audit(AuditMetadata {

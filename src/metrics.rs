@@ -240,7 +240,9 @@ impl WafMetrics {
 
         // Latency histogram
         if self.config.latency_histograms {
-            output.push_str("# HELP waf_inspection_latency_ms Request inspection latency in milliseconds\n");
+            output.push_str(
+                "# HELP waf_inspection_latency_ms Request inspection latency in milliseconds\n",
+            );
             output.push_str("# TYPE waf_inspection_latency_ms histogram\n");
             let histogram = self.latency_histogram.read();
             for (bound, count) in histogram.buckets() {
@@ -349,8 +351,7 @@ impl WafMetrics {
         self.attacks_by_source.write().clear();
         self.errors_by_type.write().clear();
 
-        *self.latency_histogram.write() =
-            Histogram::new(self.config.histogram_buckets.clone());
+        *self.latency_histogram.write() = Histogram::new(self.config.histogram_buckets.clone());
     }
 }
 

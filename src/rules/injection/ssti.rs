@@ -17,7 +17,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "template"])
             .build()?,
-
         RuleBuilder::new(935101, "SSTI: Template expression ${")
             .description("Detects ${} template expression syntax")
             .attack_type(AttackType::Ssti)
@@ -29,7 +28,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "template"])
             .build()?,
-
         RuleBuilder::new(935102, "SSTI: Template expression <%")
             .description("Detects <% %> template expression syntax")
             .attack_type(AttackType::Ssti)
@@ -41,7 +39,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "template"])
             .build()?,
-
         // Jinja2 / Python
         RuleBuilder::new(935110, "SSTI: Jinja2 config access")
             .description("Detects Jinja2 config attribute access")
@@ -54,7 +51,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "jinja2", "python"])
             .build()?,
-
         RuleBuilder::new(935111, "SSTI: Jinja2 class access")
             .description("Detects Jinja2 __class__ attribute access")
             .attack_type(AttackType::Ssti)
@@ -66,7 +62,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "jinja2", "python", "rce"])
             .build()?,
-
         RuleBuilder::new(935112, "SSTI: Jinja2 popen/system")
             .description("Detects Jinja2 command execution")
             .attack_type(AttackType::Ssti)
@@ -78,7 +73,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "jinja2", "python", "rce"])
             .build()?,
-
         // Twig (PHP)
         RuleBuilder::new(935120, "SSTI: Twig filter")
             .description("Detects Twig filter syntax")
@@ -91,7 +85,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "twig", "php"])
             .build()?,
-
         RuleBuilder::new(935121, "SSTI: Twig _self access")
             .description("Detects Twig _self attribute access")
             .attack_type(AttackType::Ssti)
@@ -103,7 +96,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "twig", "php", "rce"])
             .build()?,
-
         // Freemarker (Java)
         RuleBuilder::new(935130, "SSTI: Freemarker built-ins")
             .description("Detects Freemarker built-in functions")
@@ -116,7 +108,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "freemarker", "java"])
             .build()?,
-
         RuleBuilder::new(935131, "SSTI: Freemarker Execute")
             .description("Detects Freemarker Execute class")
             .attack_type(AttackType::Ssti)
@@ -128,7 +119,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "freemarker", "java", "rce"])
             .build()?,
-
         // Velocity (Java)
         RuleBuilder::new(935140, "SSTI: Velocity class loading")
             .description("Detects Velocity class loading")
@@ -141,7 +131,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "velocity", "java"])
             .build()?,
-
         RuleBuilder::new(935141, "SSTI: Velocity Runtime")
             .description("Detects Velocity Runtime access")
             .attack_type(AttackType::Ssti)
@@ -153,7 +142,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "velocity", "java", "rce"])
             .build()?,
-
         // Smarty (PHP)
         RuleBuilder::new(935150, "SSTI: Smarty php tag")
             .description("Detects Smarty php tag injection")
@@ -166,7 +154,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "smarty", "php", "rce"])
             .build()?,
-
         // Handlebars/Mustache
         RuleBuilder::new(935160, "SSTI: Handlebars helper injection")
             .description("Detects Handlebars helper injection")
@@ -179,7 +166,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "handlebars", "javascript"])
             .build()?,
-
         // ERB (Ruby)
         RuleBuilder::new(935170, "SSTI: ERB code execution")
             .description("Detects ERB code execution")
@@ -192,7 +178,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "erb", "ruby", "rce"])
             .build()?,
-
         // Paranoia Level 3 - Evasion techniques
         RuleBuilder::new(935180, "SSTI: Unicode brackets")
             .description("Detects Unicode variant curly brackets")
@@ -205,7 +190,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935181, "SSTI: String concatenation bypass")
             .description("Detects string concatenation in template context")
             .attack_type(AttackType::Ssti)
@@ -217,7 +201,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935182, "SSTI: Bracket attribute access")
             .description("Detects bracket notation attribute access")
             .attack_type(AttackType::Ssti)
@@ -229,7 +212,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935183, "SSTI: getattr/attr function")
             .description("Detects getattr/attr for attribute access bypass")
             .attack_type(AttackType::Ssti)
@@ -241,7 +223,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935184, "SSTI: Encoded class attribute")
             .description("Detects URL-encoded class attributes")
             .attack_type(AttackType::Ssti)
@@ -253,7 +234,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935185, "SSTI: Lipsum/cycler exploit")
             .description("Detects Jinja2 lipsum/cycler for RCE")
             .attack_type(AttackType::Ssti)
@@ -265,7 +245,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "jinja2", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935186, "SSTI: Request object abuse")
             .description("Detects request object for filter bypass")
             .attack_type(AttackType::Ssti)
@@ -277,7 +256,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "jinja2", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935187, "SSTI: Hex/octal string bypass")
             .description("Detects hex/octal strings in template")
             .attack_type(AttackType::Ssti)
@@ -289,7 +267,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935188, "SSTI: Filter chain")
             .description("Detects multiple filters for bypass")
             .attack_type(AttackType::Ssti)
@@ -301,7 +278,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(935189, "SSTI: Set/import statements")
             .description("Detects template set/import for bypass")
             .attack_type(AttackType::Ssti)
@@ -313,7 +289,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-evasion", "pl3"])
             .build()?,
-
         // Paranoia Level 4 - Maximum sensitivity
         RuleBuilder::new(935190, "SSTI: Any double brace")
             .description("Detects any {{ or }} pattern")
@@ -326,7 +301,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935191, "SSTI: Any angle percent")
             .description("Detects any <% or %> pattern")
             .attack_type(AttackType::Ssti)
@@ -338,7 +312,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935192, "SSTI: Dollar brace")
             .description("Detects any ${ pattern")
             .attack_type(AttackType::Ssti)
@@ -350,7 +323,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935193, "SSTI: Dunder pattern")
             .description("Detects any double underscore pattern")
             .attack_type(AttackType::Ssti)
@@ -362,7 +334,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935194, "SSTI: Dot bracket access")
             .description("Detects attribute access patterns")
             .attack_type(AttackType::Ssti)
@@ -374,7 +345,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935195, "SSTI: Pipe filter")
             .description("Detects any pipe character in brace context")
             .attack_type(AttackType::Ssti)
@@ -386,7 +356,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935196, "SSTI: Hash/block syntax")
             .description("Detects Handlebars block syntax")
             .attack_type(AttackType::Ssti)
@@ -398,7 +367,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935197, "SSTI: Class-like words")
             .description("Detects class/object related words")
             .attack_type(AttackType::Ssti)
@@ -410,7 +378,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935198, "SSTI: Template keywords")
             .description("Detects common template keywords")
             .attack_type(AttackType::Ssti)
@@ -422,7 +389,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(1336)
             .tags(&["ssti", "ssti-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(935199, "SSTI: Runtime/exec words")
             .description("Detects execution-related words")
             .attack_type(AttackType::Ssti)

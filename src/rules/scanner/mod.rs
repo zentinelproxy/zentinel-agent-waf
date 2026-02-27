@@ -17,7 +17,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "sqli-scanner"])
             .build()?,
-
         RuleBuilder::new(913101, "Scanner: Nikto detected")
             .description("Detects Nikto web scanner")
             .attack_type(AttackType::ScannerDetection)
@@ -29,7 +28,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "web-scanner"])
             .build()?,
-
         RuleBuilder::new(913102, "Scanner: Nessus detected")
             .description("Detects Nessus vulnerability scanner")
             .attack_type(AttackType::ScannerDetection)
@@ -41,7 +39,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "vuln-scanner"])
             .build()?,
-
         RuleBuilder::new(913103, "Scanner: Acunetix detected")
             .description("Detects Acunetix web scanner")
             .attack_type(AttackType::ScannerDetection)
@@ -53,7 +50,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "web-scanner"])
             .build()?,
-
         RuleBuilder::new(913104, "Scanner: Burp Suite detected")
             .description("Detects Burp Suite proxy/scanner")
             .attack_type(AttackType::ScannerDetection)
@@ -65,7 +61,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "proxy"])
             .build()?,
-
         // Network scanners
         RuleBuilder::new(913110, "Scanner: Nmap detected")
             .description("Detects Nmap network scanner")
@@ -78,7 +73,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "network-scanner"])
             .build()?,
-
         // Directory bruteforcers
         RuleBuilder::new(913120, "Scanner: DirBuster/Gobuster detected")
             .description("Detects directory bruteforce tools")
@@ -91,7 +85,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "directory-bruteforce"])
             .build()?,
-
         // CMS scanners
         RuleBuilder::new(913130, "Scanner: WPScan detected")
             .description("Detects WordPress scanner")
@@ -104,7 +97,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "cms-scanner"])
             .build()?,
-
         // Exploitation frameworks
         RuleBuilder::new(913140, "Scanner: Metasploit detected")
             .description("Detects Metasploit framework")
@@ -117,7 +109,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "exploitation"])
             .build()?,
-
         // Bots and crawlers
         RuleBuilder::new(913150, "Scanner: Bad bot User-Agent")
             .description("Detects known bad bot signatures")
@@ -130,7 +121,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "bot"])
             .build()?,
-
         RuleBuilder::new(913151, "Scanner: Empty/missing User-Agent")
             .description("Detects requests with suspicious User-Agent")
             .attack_type(AttackType::ScannerDetection)
@@ -142,7 +132,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(200)
             .tags(&["scanner", "bot"])
             .build()?,
-
         // Credential stuffing tools
         RuleBuilder::new(913160, "Scanner: Hydra detected")
             .description("Detects Hydra password cracker")

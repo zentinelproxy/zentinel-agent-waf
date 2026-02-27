@@ -116,8 +116,13 @@ impl StreamingInspector {
     ) -> bool {
         // Deduplicate detections by rule_id (same rule might match in overlap region)
         for detection in new_detections {
-            if !self.detections.iter().any(|d| d.rule_id == detection.rule_id) {
-                self.accumulated_score.add(&detection, location_weight, severity_weight);
+            if !self
+                .detections
+                .iter()
+                .any(|d| d.rule_id == detection.rule_id)
+            {
+                self.accumulated_score
+                    .add(&detection, location_weight, severity_weight);
                 self.detections.push(detection);
             }
         }
@@ -297,10 +302,7 @@ mod tests {
         inspector.prepare_chunk(b"test").unwrap();
 
         // Add detections that exceed threshold
-        let detections = vec![
-            make_detection(1001, 15),
-            make_detection(1002, 20),
-        ];
+        let detections = vec![make_detection(1001, 15), make_detection(1002, 20)];
         let should_continue = inspector.add_detections(detections);
 
         assert!(!should_continue);

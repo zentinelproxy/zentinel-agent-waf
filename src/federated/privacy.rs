@@ -1,6 +1,7 @@
 //! Differential Privacy for Federated Learning
 //!
 //! Implements privacy-preserving mechanisms to protect individual training samples.
+#![allow(dead_code)]
 
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -70,8 +71,7 @@ impl PrivacyBudget {
 
     /// Check if budget is exhausted
     pub fn is_exhausted(&self) -> bool {
-        self.consumed_epsilon >= self.total_epsilon
-            || self.consumed_delta >= self.total_delta
+        self.consumed_epsilon >= self.total_epsilon || self.consumed_delta >= self.total_delta
     }
 }
 
@@ -127,7 +127,8 @@ impl DifferentialPrivacy {
         let sigma = self.sensitivity * (2.0 * (1.25 / self.delta).ln()).sqrt() / self.epsilon;
 
         let normal = Normal::new(0.0, sigma).unwrap();
-        gradients.iter()
+        gradients
+            .iter()
             .map(|&g| g + normal.sample(rng) as f32)
             .collect()
     }
@@ -137,7 +138,8 @@ impl DifferentialPrivacy {
         // Laplace scale: b = sensitivity / epsilon
         let scale = self.sensitivity / self.epsilon;
 
-        gradients.iter()
+        gradients
+            .iter()
             .map(|&g| {
                 let u: f64 = rng.gen::<f64>() - 0.5;
                 let laplace = -scale * u.signum() * (1.0 - 2.0 * u.abs()).ln();
@@ -314,7 +316,8 @@ impl RenyiAccountant {
     /// Get total epsilon spent
     pub fn get_epsilon(&self) -> f64 {
         // Convert RDP to (epsilon, delta)-DP
-        self.orders.iter()
+        self.orders
+            .iter()
             .zip(self.log_moments.iter())
             .map(|(&order, &log_moment)| {
                 log_moment + (order - 1.0).ln() / order - (order * self.delta).ln() / order
@@ -342,7 +345,10 @@ mod tests {
         assert_eq!(noisy.len(), 3);
         // With epsilon=1.0, noise should be moderate
         // Values should be different from original
-        assert!(noisy.iter().zip(gradients.iter()).any(|(n, &o)| (*n - o).abs() > 0.001));
+        assert!(noisy
+            .iter()
+            .zip(gradients.iter())
+            .any(|(n, &o)| (*n - o).abs() > 0.001));
     }
 
     #[test]

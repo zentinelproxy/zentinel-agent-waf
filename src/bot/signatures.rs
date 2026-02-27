@@ -69,11 +69,9 @@ static BAD_BOT_PATTERNS: LazyLock<Vec<(&'static str, &'static str, u8)>> = LazyL
         (r"(?i)wfuzz", "WFuzz", 70),
         (r"(?i)hydra", "Hydra", 85),
         (r"(?i)metasploit", "Metasploit", 90),
-
         // Scrapers and spam bots
         (r"(?i)scrapy", "Scrapy", 60),
         (r"(?i)httrack", "HTTrack", 65),
-
         // Known malicious
         (r"(?i)hacker", "Hacker UA", 70),
         (r"(?i)attack", "Attack UA", 80),
@@ -93,23 +91,19 @@ static SUSPICIOUS_PATTERNS: LazyLock<Vec<(&'static str, &'static str, u8)>> = La
         (r"(?i)libwww-perl", "Perl LWP", 35),
         (r"(?i)java/", "Java HTTP Client", 25),
         (r"(?i)go-http-client", "Go HTTP Client", 25),
-
         // Generic automation patterns
         (r"(?i)headless", "Headless Browser", 30),
         (r"(?i)phantom", "PhantomJS", 40),
         (r"(?i)selenium", "Selenium", 35),
         (r"(?i)puppeteer", "Puppeteer", 35),
         (r"(?i)playwright", "Playwright", 35),
-
         // Version mismatches / anomalies
         (r"Chrome/[0-3]\.", "Very Old Chrome", 50),
         (r"Firefox/[0-3]\.", "Very Old Firefox", 50),
         (r"MSIE [0-6]\.", "Ancient IE", 60),
-
         // Empty or single-word UA
         (r"^[A-Za-z]+$", "Single Word UA", 40),
         (r"^Mozilla/5\.0$", "Bare Mozilla UA", 45),
-
         // Known bad patterns
         (r"(?i)bot|spider|crawl", "Generic Bot Pattern", 25),
     ]
@@ -132,22 +126,24 @@ impl BotSignatureDb {
     pub fn new() -> Self {
         let good_bots = GOOD_BOT_PATTERNS
             .iter()
-            .filter_map(|(pattern, name)| {
-                Regex::new(pattern).ok().map(|r| (r, name.to_string()))
-            })
+            .filter_map(|(pattern, name)| Regex::new(pattern).ok().map(|r| (r, name.to_string())))
             .collect();
 
         let bad_bots = BAD_BOT_PATTERNS
             .iter()
             .filter_map(|(pattern, name, score)| {
-                Regex::new(pattern).ok().map(|r| (r, name.to_string(), *score))
+                Regex::new(pattern)
+                    .ok()
+                    .map(|r| (r, name.to_string(), *score))
             })
             .collect();
 
         let suspicious_patterns = SUSPICIOUS_PATTERNS
             .iter()
             .filter_map(|(pattern, name, score)| {
-                Regex::new(pattern).ok().map(|r| (r, name.to_string(), *score))
+                Regex::new(pattern)
+                    .ok()
+                    .map(|r| (r, name.to_string(), *score))
             })
             .collect();
 
@@ -202,12 +198,18 @@ impl BotSignatureDb {
 
     /// Check if a User-Agent is a known good bot
     pub fn is_good_bot(&self, user_agent: &str) -> bool {
-        matches!(self.classify_user_agent(user_agent), BotSignature::GoodBot(_))
+        matches!(
+            self.classify_user_agent(user_agent),
+            BotSignature::GoodBot(_)
+        )
     }
 
     /// Check if a User-Agent is a known bad bot
     pub fn is_bad_bot(&self, user_agent: &str) -> bool {
-        matches!(self.classify_user_agent(user_agent), BotSignature::BadBot(_, _))
+        matches!(
+            self.classify_user_agent(user_agent),
+            BotSignature::BadBot(_, _)
+        )
     }
 }
 

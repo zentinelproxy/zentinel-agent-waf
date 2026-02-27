@@ -4,15 +4,14 @@
 //! to verify the full protocol flow.
 
 use base64::Engine;
-use zentinel_agent_protocol::{
-    Decision, RequestBodyChunkEvent,
-    RequestHeadersEvent, RequestMetadata, ResponseBodyChunkEvent,
-};
-use zentinel_agent_protocol::v2::{AgentClientV2Uds, UdsAgentServerV2};
-use zentinel_agent_waf::{WafAgent, WafConfig};
 use std::collections::HashMap;
 use std::time::Duration;
 use tempfile::tempdir;
+use zentinel_agent_protocol::v2::{AgentClientV2Uds, UdsAgentServerV2};
+use zentinel_agent_protocol::{
+    Decision, RequestBodyChunkEvent, RequestHeadersEvent, RequestMetadata, ResponseBodyChunkEvent,
+};
+use zentinel_agent_waf::{WafAgent, WafConfig};
 
 /// Helper to start a WAF agent server and return the socket path
 async fn start_test_server(config: WafConfig) -> (tempfile::TempDir, std::path::PathBuf) {
@@ -733,7 +732,10 @@ async fn test_paranoia_level_1_less_sensitive() {
 // ============================================================================
 
 /// Send a configuration update via the v2 protocol and return the response
-async fn send_config(client: &AgentClientV2Uds, config_json: serde_json::Value) -> zentinel_agent_protocol::AgentResponse {
+async fn send_config(
+    client: &AgentClientV2Uds,
+    config_json: serde_json::Value,
+) -> zentinel_agent_protocol::AgentResponse {
     let correlation_id = uuid::Uuid::new_v4().to_string();
     client
         .send_configure(&correlation_id, &config_json)
@@ -757,9 +759,13 @@ async fn test_configure_event_applies_paranoia_level() {
     assert!(is_allow(&response.decision), "Expected Allow at paranoia 1");
 
     // Send configure event to increase paranoia level to 2
-    let response = send_config(&client, serde_json::json!({
-        "paranoia-level": 2
-    })).await;
+    let response = send_config(
+        &client,
+        serde_json::json!({
+            "paranoia-level": 2
+        }),
+    )
+    .await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -793,9 +799,13 @@ async fn test_configure_event_disables_sqli() {
     );
 
     // Send configure event to disable SQLi
-    let response = send_config(&client, serde_json::json!({
-        "sqli": false
-    })).await;
+    let response = send_config(
+        &client,
+        serde_json::json!({
+            "sqli": false
+        }),
+    )
+    .await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -829,9 +839,13 @@ async fn test_configure_event_sets_detect_only_mode() {
     assert!(is_block(&response.decision), "Expected Block in block mode");
 
     // Send configure event to set detect-only mode
-    let response = send_config(&client, serde_json::json!({
-        "block-mode": false
-    })).await;
+    let response = send_config(
+        &client,
+        serde_json::json!({
+            "block-mode": false
+        }),
+    )
+    .await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -875,9 +889,13 @@ async fn test_configure_event_sets_exclude_paths() {
     );
 
     // Send configure event to exclude /health
-    let response = send_config(&client, serde_json::json!({
-        "exclude-paths": ["/health", "/metrics"]
-    })).await;
+    let response = send_config(
+        &client,
+        serde_json::json!({
+            "exclude-paths": ["/health", "/metrics"]
+        }),
+    )
+    .await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"
@@ -914,19 +932,23 @@ async fn test_configure_event_full_config() {
     let client = create_client(&socket_path).await;
 
     // Send full configuration via configure event
-    let response = send_config(&client, serde_json::json!({
-        "paranoia-level": 2,
-        "sqli": true,
-        "xss": true,
-        "path-traversal": true,
-        "command-injection": true,
-        "protocol": true,
-        "block-mode": true,
-        "exclude-paths": ["/health"],
-        "body-inspection": true,
-        "max-body-size": 1048576,
-        "response-inspection": false
-    })).await;
+    let response = send_config(
+        &client,
+        serde_json::json!({
+            "paranoia-level": 2,
+            "sqli": true,
+            "xss": true,
+            "path-traversal": true,
+            "command-injection": true,
+            "protocol": true,
+            "block-mode": true,
+            "exclude-paths": ["/health"],
+            "body-inspection": true,
+            "max-body-size": 1048576,
+            "response-inspection": false
+        }),
+    )
+    .await;
     assert!(
         is_allow(&response.decision),
         "Expected Allow for valid config"

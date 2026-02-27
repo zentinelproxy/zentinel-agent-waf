@@ -1,6 +1,7 @@
 //! Gradient accumulation and management
 //!
 //! Handles gradient computation, accumulation, and compression for efficient transfer.
+#![allow(dead_code, clippy::needless_range_loop)]
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -38,7 +39,9 @@ impl ModelGradients {
     /// Accumulate gradients from a batch
     pub fn accumulate(&mut self, gradients: &[f32]) {
         // Store as single "main" layer for simplified model
-        let layer = self.layers.entry("main".to_string())
+        let layer = self
+            .layers
+            .entry("main".to_string())
             .or_insert_with(|| LayerGradients {
                 values: vec![0.0; gradients.len()],
                 samples: 0,
@@ -56,7 +59,9 @@ impl ModelGradients {
 
     /// Accumulate gradients for a specific layer
     pub fn accumulate_layer(&mut self, layer_name: &str, gradients: &[f32]) {
-        let layer = self.layers.entry(layer_name.to_string())
+        let layer = self
+            .layers
+            .entry(layer_name.to_string())
             .or_insert_with(|| LayerGradients {
                 values: vec![0.0; gradients.len()],
                 samples: 0,
@@ -85,8 +90,16 @@ impl ModelGradients {
         let mut values = Vec::new();
         for layer in self.layers.values() {
             // Average gradients by sample count
-            let avg: Vec<f32> = layer.values.iter()
-                .map(|&v| if layer.samples > 0 { v / layer.samples as f32 } else { v })
+            let avg: Vec<f32> = layer
+                .values
+                .iter()
+                .map(|&v| {
+                    if layer.samples > 0 {
+                        v / layer.samples as f32
+                    } else {
+                        v
+                    }
+                })
                 .collect();
             values.extend(avg);
         }
@@ -110,7 +123,8 @@ impl ModelGradients {
     /// Compress gradients for transmission (top-k sparsification)
     pub fn compress(&self, top_k: usize) -> CompressedGradients {
         let values = self.values();
-        let mut indexed: Vec<(usize, f32)> = values.iter()
+        let mut indexed: Vec<(usize, f32)> = values
+            .iter()
             .enumerate()
             .map(|(i, &v)| (i, v.abs()))
             .collect();
@@ -213,10 +227,7 @@ pub enum AggregationMethod {
 }
 
 /// Aggregate gradients from multiple nodes
-pub fn aggregate_gradients(
-    updates: &[GradientUpdate],
-    method: AggregationMethod,
-) -> Vec<f32> {
+pub fn aggregate_gradients(updates: &[GradientUpdate], method: AggregationMethod) -> Vec<f32> {
     if updates.is_empty() {
         return Vec::new();
     }
@@ -258,7 +269,8 @@ pub fn aggregate_gradients(
         AggregationMethod::Median => {
             let mut result = vec![0.0; grad_len];
             for i in 0..grad_len {
-                let mut values: Vec<f32> = updates.iter()
+                let mut values: Vec<f32> = updates
+                    .iter()
                     .filter_map(|u| u.gradients.get(i).copied())
                     .collect();
                 values.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -276,7 +288,8 @@ pub fn aggregate_gradients(
             let trim_count = (updates.len() as f32 * trim_ratio) as usize;
 
             for i in 0..grad_len {
-                let mut values: Vec<f32> = updates.iter()
+                let mut values: Vec<f32> = updates
+                    .iter()
                     .filter_map(|u| u.gradients.get(i).copied())
                     .collect();
                 values.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -397,9 +410,24 @@ mod tests {
     #[test]
     fn test_aggregation_median() {
         let updates = vec![
-            GradientUpdate { node_id: "a".to_string(), gradients: vec![1.0], sample_count: 1, model_version: 1 },
-            GradientUpdate { node_id: "b".to_string(), gradients: vec![2.0], sample_count: 1, model_version: 1 },
-            GradientUpdate { node_id: "c".to_string(), gradients: vec![100.0], sample_count: 1, model_version: 1 }, // outlier
+            GradientUpdate {
+                node_id: "a".to_string(),
+                gradients: vec![1.0],
+                sample_count: 1,
+                model_version: 1,
+            },
+            GradientUpdate {
+                node_id: "b".to_string(),
+                gradients: vec![2.0],
+                sample_count: 1,
+                model_version: 1,
+            },
+            GradientUpdate {
+                node_id: "c".to_string(),
+                gradients: vec![100.0],
+                sample_count: 1,
+                model_version: 1,
+            }, // outlier
         ];
 
         let result = aggregate_gradients(&updates, AggregationMethod::Median);

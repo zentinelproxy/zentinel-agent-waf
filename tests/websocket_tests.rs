@@ -3,10 +3,10 @@
 //! Tests for WebSocket frame inspection including attack detection,
 //! fragmentation handling, and configuration options.
 
-use zentinel_agent_waf::{WafAgent, WafConfig, WebSocketConfig};
-use zentinel_agent_protocol::v2::AgentHandlerV2;
-use zentinel_agent_protocol::{WebSocketFrameEvent, AgentResponse, WebSocketDecision};
 use base64::Engine as Base64Engine;
+use zentinel_agent_protocol::v2::AgentHandlerV2;
+use zentinel_agent_protocol::{AgentResponse, WebSocketDecision, WebSocketFrameEvent};
+use zentinel_agent_waf::{WafAgent, WafConfig, WebSocketConfig};
 
 /// Create a WebSocket-enabled agent for testing
 fn create_websocket_agent() -> WafAgent {
@@ -68,7 +68,12 @@ fn binary_frame(correlation_id: &str, data: &[u8], fin: bool) -> WebSocketFrameE
 }
 
 /// Create a continuation frame event
-fn continuation_frame(correlation_id: &str, payload: &str, fin: bool, frame_index: u64) -> WebSocketFrameEvent {
+fn continuation_frame(
+    correlation_id: &str,
+    payload: &str,
+    fin: bool,
+    frame_index: u64,
+) -> WebSocketFrameEvent {
     WebSocketFrameEvent {
         correlation_id: correlation_id.to_string(),
         opcode: "continuation".to_string(),
@@ -112,7 +117,10 @@ mod sqli {
         let event = text_frame("ws-1", "1' OR '1'='1", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block SQL injection in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block SQL injection in WebSocket"
+        );
     }
 
     #[tokio::test]
@@ -121,7 +129,10 @@ mod sqli {
         let event = text_frame("ws-2", "1 UNION SELECT username, password FROM users", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block UNION injection in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block UNION injection in WebSocket"
+        );
     }
 
     #[tokio::test]
@@ -131,7 +142,10 @@ mod sqli {
         let event = text_frame("ws-3", json_payload, true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should detect SQL injection in JSON WebSocket message");
+        assert!(
+            is_blocked(&response),
+            "Should detect SQL injection in JSON WebSocket message"
+        );
     }
 }
 
@@ -157,7 +171,10 @@ mod xss {
         let event = text_frame("ws-xss-2", "<img src=x onerror=alert(1)>", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block XSS event handler in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block XSS event handler in WebSocket"
+        );
     }
 
     #[tokio::test]
@@ -184,7 +201,10 @@ mod command_injection {
         let event = text_frame("ws-cmd-1", "; cat /etc/passwd", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block command injection in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block command injection in WebSocket"
+        );
     }
 
     #[tokio::test]
@@ -193,7 +213,10 @@ mod command_injection {
         let event = text_frame("ws-cmd-2", "$(whoami)", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block command substitution in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block command substitution in WebSocket"
+        );
     }
 }
 
@@ -226,7 +249,8 @@ mod safe_content {
     #[tokio::test]
     async fn test_safe_chat_message() {
         let agent = create_websocket_agent();
-        let json_payload = r#"{"user": "alice", "message": "The quick brown fox jumps over the lazy dog"}"#;
+        let json_payload =
+            r#"{"user": "alice", "message": "The quick brown fox jumps over the lazy dog"}"#;
         let event = text_frame("ws-safe-3", json_payload, true);
 
         let response = agent.on_websocket_frame(event).await;
@@ -265,7 +289,10 @@ mod fragmentation {
         let frame2 = continuation_frame("ws-frag-1", "'1'='1", true, 1);
 
         let response2 = agent.on_websocket_frame(frame2).await;
-        assert!(is_blocked(&response2), "Should block completed attack across fragments");
+        assert!(
+            is_blocked(&response2),
+            "Should block completed attack across fragments"
+        );
     }
 
     #[tokio::test]
@@ -289,7 +316,10 @@ mod fragmentation {
         // Fragment 2
         let frame2 = continuation_frame("ws-frag-safe", "World!", true, 1);
         let response2 = agent.on_websocket_frame(frame2).await;
-        assert!(is_allowed(&response2), "Should allow safe completed message");
+        assert!(
+            is_allowed(&response2),
+            "Should allow safe completed message"
+        );
     }
 }
 
@@ -309,7 +339,10 @@ mod configuration {
         // Even with attack payload, should allow when disabled
         let event = text_frame("ws-disabled", "<script>alert('XSS')</script>", true);
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_allowed(&response), "Should allow when WebSocket inspection disabled");
+        assert!(
+            is_allowed(&response),
+            "Should allow when WebSocket inspection disabled"
+        );
     }
 
     #[tokio::test]
@@ -321,7 +354,10 @@ mod configuration {
 
         let event = text_frame("ws-text-disabled", "<script>alert('XSS')</script>", true);
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_allowed(&response), "Should allow text frames when inspection disabled");
+        assert!(
+            is_allowed(&response),
+            "Should allow text frames when inspection disabled"
+        );
     }
 
     #[tokio::test]
@@ -335,7 +371,10 @@ mod configuration {
         let attack_bytes = b"<script>alert('XSS')</script>";
         let event = binary_frame("ws-binary", attack_bytes, true);
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should detect attack in binary frame when enabled");
+        assert!(
+            is_blocked(&response),
+            "Should detect attack in binary frame when enabled"
+        );
     }
 
     #[tokio::test]
@@ -346,7 +385,10 @@ mod configuration {
         let attack_bytes = b"<script>alert('XSS')</script>";
         let event = binary_frame("ws-binary-default", attack_bytes, true);
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_allowed(&response), "Should skip binary frames by default");
+        assert!(
+            is_allowed(&response),
+            "Should skip binary frames by default"
+        );
     }
 
     #[tokio::test]
@@ -481,7 +523,10 @@ mod ssti {
         let event = text_frame("ws-ssti-1", "{{7*7}}", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block Jinja2 SSTI in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block Jinja2 SSTI in WebSocket"
+        );
     }
 
     #[tokio::test]
@@ -508,7 +553,10 @@ mod path_traversal {
         let event = text_frame("ws-pt-1", "../../../etc/passwd", true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block path traversal in WebSocket");
+        assert!(
+            is_blocked(&response),
+            "Should block path traversal in WebSocket"
+        );
     }
 
     #[tokio::test]
@@ -518,6 +566,9 @@ mod path_traversal {
         let event = text_frame("ws-pt-2", json_payload, true);
 
         let response = agent.on_websocket_frame(event).await;
-        assert!(is_blocked(&response), "Should block path traversal in file request");
+        assert!(
+            is_blocked(&response),
+            "Should block path traversal in file request"
+        );
     }
 }

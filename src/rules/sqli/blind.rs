@@ -18,7 +18,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .owasp("A03:2021-Injection")
             .tags(&["sqli", "sqli-blind", "sqli-boolean"])
             .build()?,
-
         RuleBuilder::new(942151, "SQL Injection: Tautology OR true")
             .description("Detects OR true tautology")
             .attack_type(AttackType::SqlInjection)
@@ -30,7 +29,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-boolean"])
             .build()?,
-
         RuleBuilder::new(942152, "SQL Injection: AND 1=1 test")
             .description("Detects AND-based boolean blind testing")
             .attack_type(AttackType::SqlInjection)
@@ -42,7 +40,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-boolean"])
             .build()?,
-
         RuleBuilder::new(942153, "SQL Injection: Boolean substring test")
             .description("Detects boolean blind via SUBSTRING comparison")
             .attack_type(AttackType::SqlInjection)
@@ -54,7 +51,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-boolean"])
             .build()?,
-
         RuleBuilder::new(942154, "SQL Injection: Boolean ASCII test")
             .description("Detects boolean blind via ASCII value comparison")
             .attack_type(AttackType::SqlInjection)
@@ -66,7 +62,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-boolean"])
             .build()?,
-
         RuleBuilder::new(942155, "SQL Injection: CASE WHEN blind")
             .description("Detects CASE WHEN conditional blind injection")
             .attack_type(AttackType::SqlInjection)
@@ -78,7 +73,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind"])
             .build()?,
-
         RuleBuilder::new(942156, "SQL Injection: IF condition blind")
             .description("Detects IF conditional blind injection")
             .attack_type(AttackType::SqlInjection)
@@ -90,7 +84,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind"])
             .build()?,
-
         // Time-based blind
         RuleBuilder::new(942160, "SQL Injection: SLEEP function")
             .description("Detects MySQL SLEEP-based time injection")
@@ -103,7 +96,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-time", "mysql"])
             .build()?,
-
         RuleBuilder::new(942161, "SQL Injection: BENCHMARK function")
             .description("Detects MySQL BENCHMARK-based time injection")
             .attack_type(AttackType::SqlInjection)
@@ -115,7 +107,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-time", "mysql"])
             .build()?,
-
         RuleBuilder::new(942162, "SQL Injection: WAITFOR DELAY")
             .description("Detects MSSQL WAITFOR DELAY time injection")
             .attack_type(AttackType::SqlInjection)
@@ -127,7 +118,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-time", "mssql"])
             .build()?,
-
         RuleBuilder::new(942163, "SQL Injection: pg_sleep")
             .description("Detects PostgreSQL pg_sleep time injection")
             .attack_type(AttackType::SqlInjection)
@@ -139,7 +129,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-time", "postgresql"])
             .build()?,
-
         RuleBuilder::new(942164, "SQL Injection: DBMS_LOCK.SLEEP")
             .description("Detects Oracle DBMS_LOCK.SLEEP time injection")
             .attack_type(AttackType::SqlInjection)
@@ -151,7 +140,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind", "sqli-time", "oracle"])
             .build()?,
-
         // Comparison operators
         RuleBuilder::new(942170, "SQL Injection: Greater/Less comparison")
             .description("Detects numeric comparison in SQL context")
@@ -164,7 +152,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-blind"])
             .build()?,
-
         RuleBuilder::new(942171, "SQL Injection: LIKE pattern")
             .description("Detects LIKE operator with wildcards")
             .attack_type(AttackType::SqlInjection)

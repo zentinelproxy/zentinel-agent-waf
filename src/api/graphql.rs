@@ -68,20 +68,23 @@ static INTROSPECTION_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)(__schema|__type)\s*[\{\(]|__typename\b").unwrap()
 });
 
-static QUERY_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(query|mutation|subscription)\s*[\w]*\s*[\(\{]").unwrap()
-});
+static QUERY_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(query|mutation|subscription)\s*[\w]*\s*[\(\{]").unwrap());
 
-static DIRECTIVE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"@\w+").unwrap()
-});
+static DIRECTIVE_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\w+").unwrap());
 
 static INJECTION_PATTERNS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
     vec![
         // SQL-like patterns in variables
-        (Regex::new(r#""\s*;\s*(DROP|DELETE|UPDATE|INSERT)"#).unwrap(), "sql-in-variable"),
+        (
+            Regex::new(r#""\s*;\s*(DROP|DELETE|UPDATE|INSERT)"#).unwrap(),
+            "sql-in-variable",
+        ),
         // Script injection in string values
-        (Regex::new(r#""[^"]*<script"#).unwrap(), "script-in-variable"),
+        (
+            Regex::new(r#""[^"]*<script"#).unwrap(),
+            "script-in-variable",
+        ),
         // Template injection
         (Regex::new(r#"\$\{\{.*\}\}"#).unwrap(), "template-injection"),
         // NoSQL injection patterns
@@ -174,7 +177,11 @@ impl GraphQLInspector {
                 matched_value: format!("depth={} (max={})", depth, self.config.max_depth),
                 location: "body".to_string(),
                 base_score: 7,
-                tags: vec!["graphql".to_string(), "dos".to_string(), "depth".to_string()],
+                tags: vec![
+                    "graphql".to_string(),
+                    "dos".to_string(),
+                    "depth".to_string(),
+                ],
             })
         } else {
             None
@@ -192,7 +199,11 @@ impl GraphQLInspector {
                 matched_value: format!("fields={} (max={})", count, self.config.max_fields),
                 location: "body".to_string(),
                 base_score: 6,
-                tags: vec!["graphql".to_string(), "dos".to_string(), "fields".to_string()],
+                tags: vec![
+                    "graphql".to_string(),
+                    "dos".to_string(),
+                    "fields".to_string(),
+                ],
             })
         } else {
             None
@@ -210,10 +221,17 @@ impl GraphQLInspector {
                     rule_id: 98004,
                     rule_name: "GraphQL Batch Query Abuse".to_string(),
                     attack_type: AttackType::ProtocolAttack,
-                    matched_value: format!("batch_size={} (max={})", count, self.config.max_batch_size),
+                    matched_value: format!(
+                        "batch_size={} (max={})",
+                        count, self.config.max_batch_size
+                    ),
                     location: "body".to_string(),
                     base_score: 6,
-                    tags: vec!["graphql".to_string(), "dos".to_string(), "batch".to_string()],
+                    tags: vec![
+                        "graphql".to_string(),
+                        "dos".to_string(),
+                        "batch".to_string(),
+                    ],
                 });
             }
         }
@@ -312,7 +330,16 @@ fn calculate_depth(body: &str) -> usize {
 /// Count the number of fields in a GraphQL query (approximation)
 fn count_fields(body: &str) -> usize {
     // Simple heuristic: count identifiers that aren't keywords
-    let keywords = ["query", "mutation", "subscription", "fragment", "on", "true", "false", "null"];
+    let keywords = [
+        "query",
+        "mutation",
+        "subscription",
+        "fragment",
+        "on",
+        "true",
+        "false",
+        "null",
+    ];
 
     let mut count = 0;
     let mut in_string = false;
@@ -330,14 +357,12 @@ fn count_fields(body: &str) -> usize {
 
         if ch.is_alphanumeric() || ch == '_' {
             current_word.push(ch);
-        } else {
-            if !current_word.is_empty() {
-                let word_lower = current_word.to_lowercase();
-                if !keywords.contains(&word_lower.as_str()) && !current_word.starts_with('$') {
-                    count += 1;
-                }
-                current_word.clear();
+        } else if !current_word.is_empty() {
+            let word_lower = current_word.to_lowercase();
+            if !keywords.contains(&word_lower.as_str()) && !current_word.starts_with('$') {
+                count += 1;
             }
+            current_word.clear();
         }
     }
 

@@ -18,7 +18,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .owasp("A01:2021-Broken Access Control")
             .tags(&["traversal", "lfi"])
             .build()?,
-
         RuleBuilder::new(930101, "Path Traversal: URL encoded ..%2f")
             .description("Detects URL-encoded path traversal")
             .attack_type(AttackType::PathTraversal)
@@ -30,7 +29,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "encoded"])
             .build()?,
-
         RuleBuilder::new(930102, "Path Traversal: Double URL encoded")
             .description("Detects double URL-encoded path traversal")
             .attack_type(AttackType::PathTraversal)
@@ -42,7 +40,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "encoded"])
             .build()?,
-
         RuleBuilder::new(930103, "Path Traversal: UTF-8 encoded")
             .description("Detects UTF-8 encoded path traversal")
             .attack_type(AttackType::PathTraversal)
@@ -54,7 +51,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "encoded"])
             .build()?,
-
         RuleBuilder::new(930104, "Path Traversal: Backslash variant")
             .description("Detects backslash path traversal (Windows)")
             .attack_type(AttackType::PathTraversal)
@@ -66,7 +62,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "windows"])
             .build()?,
-
         // OS file access
         RuleBuilder::new(930110, "Path Traversal: /etc/passwd access")
             .description("Detects Linux password file access")
@@ -79,7 +74,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "unix"])
             .build()?,
-
         RuleBuilder::new(930111, "Path Traversal: /proc access")
             .description("Detects Linux proc filesystem access")
             .attack_type(AttackType::PathTraversal)
@@ -91,7 +85,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "unix"])
             .build()?,
-
         RuleBuilder::new(930112, "Path Traversal: Windows system files")
             .description("Detects Windows system file access")
             .attack_type(AttackType::PathTraversal)
@@ -103,7 +96,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "windows"])
             .build()?,
-
         RuleBuilder::new(930113, "Path Traversal: Config file access")
             .description("Detects common config file access")
             .attack_type(AttackType::PathTraversal)
@@ -115,7 +107,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "lfi", "config"])
             .build()?,
-
         // Local File Inclusion
         RuleBuilder::new(930120, "LFI: PHP wrapper php://")
             .description("Detects PHP stream wrapper")
@@ -128,7 +119,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(98)
             .tags(&["lfi", "rfi", "php"])
             .build()?,
-
         RuleBuilder::new(930121, "LFI: PHP expect wrapper")
             .description("Detects PHP expect:// for command execution")
             .attack_type(AttackType::PathTraversal)
@@ -140,7 +130,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(98)
             .tags(&["lfi", "rfi", "php", "rce"])
             .build()?,
-
         RuleBuilder::new(930122, "LFI: file:// protocol")
             .description("Detects file:// protocol usage")
             .attack_type(AttackType::PathTraversal)
@@ -152,7 +141,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["lfi", "file-protocol"])
             .build()?,
-
         RuleBuilder::new(930123, "LFI: Null byte injection")
             .description("Detects null byte for extension bypass")
             .attack_type(AttackType::PathTraversal)
@@ -164,7 +152,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(626)
             .tags(&["lfi", "null-byte"])
             .build()?,
-
         // Remote File Inclusion
         RuleBuilder::new(930130, "RFI: HTTP include")
             .description("Detects HTTP URL in include parameter")
@@ -177,7 +164,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(98)
             .tags(&["rfi", "remote"])
             .build()?,
-
         RuleBuilder::new(930131, "RFI: FTP include")
             .description("Detects FTP URL in include parameter")
             .attack_type(AttackType::PathTraversal)
@@ -189,7 +175,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(98)
             .tags(&["rfi", "remote"])
             .build()?,
-
         // Log poisoning
         RuleBuilder::new(930140, "LFI: Log file access")
             .description("Detects log file access for poisoning")
@@ -202,7 +187,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["lfi", "log-poisoning"])
             .build()?,
-
         // Paranoia Level 3 - Evasion techniques
         RuleBuilder::new(930150, "Path Traversal: Unicode encoding")
             .description("Detects Unicode-encoded path traversal (overlong)")
@@ -215,7 +199,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930151, "Path Traversal: Mixed slash encoding")
             .description("Detects mixed forward/backslash encoding")
             .attack_type(AttackType::PathTraversal)
@@ -227,7 +210,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930152, "Path Traversal: Triple encoding")
             .description("Detects triple URL-encoded path components")
             .attack_type(AttackType::PathTraversal)
@@ -239,7 +221,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930153, "Path Traversal: Dot padding")
             .description("Detects padded dot sequences")
             .attack_type(AttackType::PathTraversal)
@@ -251,7 +232,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930154, "Path Traversal: Encoded null in path")
             .description("Detects encoded null bytes in path context")
             .attack_type(AttackType::PathTraversal)
@@ -263,7 +243,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(626)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930155, "Path Traversal: Tomcat %c0%ae bypass")
             .description("Detects Tomcat-specific UTF-8 bypass")
             .attack_type(AttackType::PathTraversal)
@@ -275,7 +254,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930156, "Path Traversal: Path normalization bypass")
             .description("Detects path with mixed ./ and ../ sequences")
             .attack_type(AttackType::PathTraversal)
@@ -287,7 +265,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930157, "Path Traversal: PHP wrapper variations")
             .description("Detects PHP wrapper variations")
             .attack_type(AttackType::PathTraversal)
@@ -299,7 +276,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(98)
             .tags(&["lfi", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930158, "Path Traversal: Encoded scheme")
             .description("Detects URL-encoded file:// scheme")
             .attack_type(AttackType::PathTraversal)
@@ -311,7 +287,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["lfi", "traversal-evasion", "pl3"])
             .build()?,
-
         RuleBuilder::new(930159, "Path Traversal: Java file access")
             .description("Detects Java-specific file access patterns")
             .attack_type(AttackType::PathTraversal)
@@ -323,7 +298,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "java", "pl3"])
             .build()?,
-
         // Paranoia Level 4 - Maximum sensitivity
         RuleBuilder::new(930170, "Path Traversal: Any double dot")
             .description("Detects any double dot sequence")
@@ -336,7 +310,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930171, "Path Traversal: Path separator")
             .description("Detects any backslash in path")
             .attack_type(AttackType::PathTraversal)
@@ -348,7 +321,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930172, "Path Traversal: Executable extension")
             .description("Detects executable file extensions in path")
             .attack_type(AttackType::PathTraversal)
@@ -360,7 +332,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930173, "Path Traversal: Config file extension")
             .description("Detects config file extensions")
             .attack_type(AttackType::PathTraversal)
@@ -372,7 +343,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930174, "Path Traversal: Absolute Unix path")
             .description("Detects any absolute Unix path")
             .attack_type(AttackType::PathTraversal)
@@ -384,7 +354,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930175, "Path Traversal: Drive letter")
             .description("Detects Windows drive letter pattern")
             .attack_type(AttackType::PathTraversal)
@@ -396,7 +365,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930176, "Path Traversal: Hidden files")
             .description("Detects hidden file patterns (dotfiles)")
             .attack_type(AttackType::PathTraversal)
@@ -408,7 +376,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930177, "Path Traversal: Percent encoding")
             .description("Detects any percent-encoded path character")
             .attack_type(AttackType::PathTraversal)
@@ -420,7 +387,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930178, "Path Traversal: URL scheme")
             .description("Detects any URL scheme in path-like context")
             .attack_type(AttackType::PathTraversal)
@@ -432,7 +398,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(22)
             .tags(&["traversal", "traversal-generic", "pl4"])
             .build()?,
-
         RuleBuilder::new(930179, "Path Traversal: Directory keywords")
             .description("Detects common sensitive directory names")
             .attack_type(AttackType::PathTraversal)

@@ -5,8 +5,8 @@
 //! - <50MB steady state memory
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use zentinel_agent_waf::{WafConfig, WafEngine};
 use std::collections::HashMap;
+use zentinel_agent_waf::{WafConfig, WafEngine};
 
 /// Generate realistic test payloads
 fn generate_payloads() -> Vec<(&'static str, String)> {
@@ -21,7 +21,10 @@ fn generate_payloads() -> Vec<(&'static str, String)> {
             "1'/**/UNION/**/SELECT/**/password/**/FROM/**/users--".to_string(),
         ),
         ("xss_simple", "<script>alert(1)</script>".to_string()),
-        ("xss_encoded", "%3Cscript%3Ealert(1)%3C/script%3E".to_string()),
+        (
+            "xss_encoded",
+            "%3Cscript%3Ealert(1)%3C/script%3E".to_string(),
+        ),
         ("xss_event", "<img src=x onerror=alert(1)>".to_string()),
         ("path_traversal", "../../etc/passwd".to_string()),
         ("cmd_injection", "; cat /etc/passwd".to_string()),
@@ -187,11 +190,9 @@ fn benchmark_body_sizes(c: &mut Criterion) {
         let body = generate_body_with_attack(size);
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(
-            BenchmarkId::new("bytes", size),
-            &body,
-            |b, input| b.iter(|| engine.check(black_box(input), black_box("body"))),
-        );
+        group.bench_with_input(BenchmarkId::new("bytes", size), &body, |b, input| {
+            b.iter(|| engine.check(black_box(input), black_box("body")))
+        });
     }
 
     group.finish();
@@ -324,12 +325,10 @@ fn benchmark_throughput(c: &mut Criterion) {
 
     // Measure raw requests per second with typical payload
     let query = "search=laptop&category=electronics&page=1";
-    let headers: HashMap<String, Vec<String>> = [(
-        "User-Agent".to_string(),
-        vec!["Mozilla/5.0".to_string()],
-    )]
-    .into_iter()
-    .collect();
+    let headers: HashMap<String, Vec<String>> =
+        [("User-Agent".to_string(), vec!["Mozilla/5.0".to_string()])]
+            .into_iter()
+            .collect();
 
     group.bench_function("requests_per_sec", |b| {
         b.iter(|| {

@@ -49,10 +49,19 @@ static NOSQL_PATTERNS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
         (Regex::new(r#""\$exists"\s*:"#).unwrap(), "$exists operator"),
         (Regex::new(r#""\$type"\s*:"#).unwrap(), "$type operator"),
         (Regex::new(r#""\$expr"\s*:"#).unwrap(), "$expr operator"),
-        (Regex::new(r#""\$jsonSchema"\s*:"#).unwrap(), "$jsonSchema operator"),
+        (
+            Regex::new(r#""\$jsonSchema"\s*:"#).unwrap(),
+            "$jsonSchema operator",
+        ),
         // Function injection
-        (Regex::new(r#""\$function"\s*:"#).unwrap(), "$function operator"),
-        (Regex::new(r#""\$accumulator"\s*:"#).unwrap(), "$accumulator operator"),
+        (
+            Regex::new(r#""\$function"\s*:"#).unwrap(),
+            "$function operator",
+        ),
+        (
+            Regex::new(r#""\$accumulator"\s*:"#).unwrap(),
+            "$accumulator operator",
+        ),
     ]
 });
 
@@ -75,7 +84,10 @@ static SUSPICIOUS_KEYS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| 
         (Regex::new(r#""permissions"\s*:"#).unwrap(), "permissions"),
         (Regex::new(r#""privileges"\s*:"#).unwrap(), "privileges"),
         (Regex::new(r#""password"\s*:"#).unwrap(), "password"),
-        (Regex::new(r#""password_hash"\s*:"#).unwrap(), "password_hash"),
+        (
+            Regex::new(r#""password_hash"\s*:"#).unwrap(),
+            "password_hash",
+        ),
         (Regex::new(r#""api_key"\s*:"#).unwrap(), "api_key"),
         (Regex::new(r#""secret"\s*:"#).unwrap(), "secret"),
         (Regex::new(r#""internal"\s*:"#).unwrap(), "internal"),
@@ -129,7 +141,11 @@ impl JsonInspector {
                     matched_value: m.as_str().to_string(),
                     location: "body".to_string(),
                     base_score: 8,
-                    tags: vec!["json".to_string(), "nosql".to_string(), "injection".to_string()],
+                    tags: vec![
+                        "json".to_string(),
+                        "nosql".to_string(),
+                        "injection".to_string(),
+                    ],
                 });
             }
         }
@@ -261,7 +277,9 @@ mod tests {
 
         let where_injection = r#"{"$where": "this.password == 'test'"}"#;
         let detections = inspector.inspect(where_injection);
-        assert!(detections.iter().any(|d| d.matched_value.contains("$where")));
+        assert!(detections
+            .iter()
+            .any(|d| d.matched_value.contains("$where")));
     }
 
     #[test]

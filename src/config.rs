@@ -70,6 +70,7 @@ pub struct WafConfig {
 /// Configuration for schema validation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub struct SchemaValidationConfig {
     /// Enable schema validation
     #[serde(default)]
@@ -83,17 +84,6 @@ pub struct SchemaValidationConfig {
     /// Schema reload interval in seconds (0 = disabled)
     #[serde(default)]
     pub reload_interval_secs: u64,
-}
-
-impl Default for SchemaValidationConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            openapi: OpenApiValidationConfig::default(),
-            graphql: GraphQLSchemaValidationConfig::default(),
-            reload_interval_secs: 0,
-        }
-    }
 }
 
 /// OpenAPI schema validation configuration

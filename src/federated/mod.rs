@@ -1,21 +1,21 @@
 //! Federated Learning Module
 //!
 //! Privacy-preserving distributed learning across WAF deployments.
+#![allow(clippy::await_holding_lock)]
 //! Only model gradients are shared, never raw request data.
 
 mod coordinator;
 mod gradients;
 mod privacy;
 
-pub use coordinator::{FederatedCoordinator, CoordinatorConfig};
-pub use gradients::{ModelGradients, GradientUpdate};
+pub use coordinator::{CoordinatorConfig, FederatedCoordinator};
+pub use gradients::{GradientUpdate, ModelGradients};
 pub use privacy::{DifferentialPrivacy, PrivacyBudget};
 
-use crate::ml::classifier::AttackClassifier;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Federated learning configuration
 #[derive(Debug, Clone)]
@@ -102,7 +102,7 @@ impl Default for LocalModel {
         let mut weights = Vec::with_capacity(10000);
         for i in 0..10000 {
             // Pseudo-random initialization
-            weights.push(((i as f32 * 0.0001).sin() * 0.1) as f32);
+            weights.push((i as f32 * 0.0001).sin() * 0.1);
         }
 
         Self {
@@ -134,9 +134,10 @@ impl FederatedLearning {
     /// Create new federated learning instance
     pub fn new(config: FederatedConfig) -> Self {
         let privacy = DifferentialPrivacy::new(config.privacy_epsilon);
-        let coordinator = config.coordinator_url.as_ref().map(|url| {
-            FederatedCoordinator::new(url.clone(), config.node_id.clone())
-        });
+        let coordinator = config
+            .coordinator_url
+            .as_ref()
+            .map(|url| FederatedCoordinator::new(url.clone(), config.node_id.clone()));
 
         Self {
             config,
@@ -198,10 +199,7 @@ impl FederatedLearning {
         let mut accumulated = self.gradients.write();
         accumulated.accumulate(&private_gradients);
 
-        debug!(
-            batch_size = batch.len(),
-            "Completed local training batch"
-        );
+        debug!(batch_size = batch.len(), "Completed local training batch");
     }
 
     /// Compute gradients for a batch (simplified)
@@ -251,7 +249,9 @@ impl FederatedLearning {
             return Ok(());
         }
 
-        let coordinator = self.coordinator.as_ref()
+        let coordinator = self
+            .coordinator
+            .as_ref()
             .ok_or(FederatedError::NoCoordinator)?;
 
         // Check if we have enough samples
@@ -267,7 +267,7 @@ impl FederatedLearning {
         // Get accumulated gradients
         let gradients = {
             let mut g = self.gradients.write();
-            std::mem::replace(&mut *g, ModelGradients::new())
+            std::mem::take(&mut *g)
         };
 
         if gradients.is_empty() {
@@ -303,7 +303,9 @@ impl FederatedLearning {
             return Ok(());
         }
 
-        let coordinator = self.coordinator.as_ref()
+        let coordinator = self
+            .coordinator
+            .as_ref()
             .ok_or(FederatedError::NoCoordinator)?;
 
         // Check if enough time has passed
@@ -326,10 +328,7 @@ impl FederatedLearning {
             stats.models_received += 1;
             stats.last_model_update = Some(Instant::now());
 
-            info!(
-                version = model.version,
-                "Applied federated model update"
-            );
+            info!(version = model.version, "Applied federated model update");
         }
 
         *self.last_sync.write() = Instant::now();
@@ -413,7 +412,8 @@ impl FederatedLearning {
             "{} {} {}",
             path,
             query.unwrap_or(""),
-            body.map(|b| String::from_utf8_lossy(b).to_string()).unwrap_or_default()
+            body.map(|b| String::from_utf8_lossy(b).to_string())
+                .unwrap_or_default()
         );
 
         // Add character frequency buckets
@@ -461,7 +461,7 @@ impl FederatedLearning {
             return 1.0;
         }
 
-        let printable = data.iter().filter(|&&b| b >= 0x20 && b < 0x7F).count();
+        let printable = data.iter().filter(|&&b| (0x20..0x7F).contains(&b)).count();
         printable as f32 / data.len() as f32
     }
 }

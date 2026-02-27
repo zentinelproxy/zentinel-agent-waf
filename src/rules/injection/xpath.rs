@@ -16,7 +16,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(91)
             .tags(&["xpath", "boolean"])
             .build()?,
-
         RuleBuilder::new(934101, "XPath Injection: XPath functions")
             .description("Detects XPath function injection")
             .attack_type(AttackType::XpathInjection)
@@ -28,7 +27,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(91)
             .tags(&["xpath", "function"])
             .build()?,
-
         RuleBuilder::new(934102, "XPath Injection: Axis traversal")
             .description("Detects XPath axis injection")
             .attack_type(AttackType::XpathInjection)
@@ -40,7 +38,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(91)
             .tags(&["xpath", "traversal"])
             .build()?,
-
         RuleBuilder::new(934103, "XPath Injection: Position predicate")
             .description("Detects XPath position predicate injection")
             .attack_type(AttackType::XpathInjection)
@@ -52,7 +49,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(91)
             .tags(&["xpath", "predicate"])
             .build()?,
-
         RuleBuilder::new(934104, "XPath Injection: Node extraction")
             .description("Detects XPath node extraction")
             .attack_type(AttackType::XpathInjection)
@@ -64,7 +60,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(91)
             .tags(&["xpath", "extraction"])
             .build()?,
-
         RuleBuilder::new(934105, "XPath Injection: Contains function")
             .description("Detects XPath contains() for blind injection")
             .attack_type(AttackType::XpathInjection)

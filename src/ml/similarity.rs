@@ -1,6 +1,7 @@
 //! Payload Embedding Similarity
 //!
 //! Detects attacks by measuring similarity to known malicious payloads.
+#![allow(dead_code)]
 //! Uses MinHash for efficient approximate similarity search, which allows
 //! comparing against thousands of known attack signatures quickly.
 //!
@@ -68,7 +69,8 @@ impl MinHashSignature {
             return 0.0;
         }
 
-        let matching = self.values
+        let matching = self
+            .values
             .iter()
             .zip(&other.values)
             .filter(|(a, b)| a == b)

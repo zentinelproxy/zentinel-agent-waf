@@ -85,64 +85,126 @@ static CREDIT_CARD_SEPARATED: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 // SSN pattern (XXX-XX-XXXX) - simple pattern, validation done in code
-static SSN_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b").unwrap()
-});
+static SSN_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b").unwrap());
 
 // API Key patterns
 static API_KEY_PATTERNS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
     vec![
         // AWS Access Key ID
-        (Regex::new(r"(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}").unwrap(), "AWS"),
+        (
+            Regex::new(r"(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}")
+                .unwrap(),
+            "AWS",
+        ),
         // AWS Secret Access Key
-        (Regex::new(r#"(?i)aws.{0,20}['"]\s*[A-Za-z0-9/+=]{40}\s*['"]"#).unwrap(), "AWS Secret"),
+        (
+            Regex::new(r#"(?i)aws.{0,20}['"]\s*[A-Za-z0-9/+=]{40}\s*['"]"#).unwrap(),
+            "AWS Secret",
+        ),
         // Google API Key
         (Regex::new(r"AIza[0-9A-Za-z_-]{35}").unwrap(), "Google"),
         // GitHub Token
-        (Regex::new(r"gh[pousr]_[A-Za-z0-9_]{36,255}").unwrap(), "GitHub"),
+        (
+            Regex::new(r"gh[pousr]_[A-Za-z0-9_]{36,255}").unwrap(),
+            "GitHub",
+        ),
         // GitHub Personal Access Token (classic)
-        (Regex::new(r"github_pat_[A-Za-z0-9_]{22,255}").unwrap(), "GitHub PAT"),
+        (
+            Regex::new(r"github_pat_[A-Za-z0-9_]{22,255}").unwrap(),
+            "GitHub PAT",
+        ),
         // Slack Token
-        (Regex::new(r"xox[baprs]-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*").unwrap(), "Slack"),
+        (
+            Regex::new(r"xox[baprs]-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*").unwrap(),
+            "Slack",
+        ),
         // Stripe API Key (live and test)
-        (Regex::new(r"sk_(live|test)_[0-9a-zA-Z]{24,}").unwrap(), "Stripe"),
-        (Regex::new(r"pk_(live|test)_[0-9a-zA-Z]{24,}").unwrap(), "Stripe Public"),
+        (
+            Regex::new(r"sk_(live|test)_[0-9a-zA-Z]{24,}").unwrap(),
+            "Stripe",
+        ),
+        (
+            Regex::new(r"pk_(live|test)_[0-9a-zA-Z]{24,}").unwrap(),
+            "Stripe Public",
+        ),
         // Twilio
         (Regex::new(r"SK[0-9a-fA-F]{32}").unwrap(), "Twilio"),
         // SendGrid
-        (Regex::new(r"SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}").unwrap(), "SendGrid"),
+        (
+            Regex::new(r"SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}").unwrap(),
+            "SendGrid",
+        ),
         // Mailchimp
-        (Regex::new(r"[a-f0-9]{32}-us[0-9]{1,2}").unwrap(), "Mailchimp"),
+        (
+            Regex::new(r"[a-f0-9]{32}-us[0-9]{1,2}").unwrap(),
+            "Mailchimp",
+        ),
         // Square
-        (Regex::new(r"sq0[a-z]{3}-[0-9A-Za-z_-]{22,43}").unwrap(), "Square"),
+        (
+            Regex::new(r"sq0[a-z]{3}-[0-9A-Za-z_-]{22,43}").unwrap(),
+            "Square",
+        ),
         // PayPal
-        (Regex::new(r"access_token\$production\$[a-z0-9]{16}\$[a-f0-9]{32}").unwrap(), "PayPal"),
+        (
+            Regex::new(r"access_token\$production\$[a-z0-9]{16}\$[a-f0-9]{32}").unwrap(),
+            "PayPal",
+        ),
         // Heroku
-        (Regex::new(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}").unwrap(), "UUID/Heroku"),
+        (
+            Regex::new(
+                r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+            )
+            .unwrap(),
+            "UUID/Heroku",
+        ),
         // Generic API key pattern
-        (Regex::new(r#"(?i)api[_-]?key['"]?\s*[:=]\s*['"]?[a-zA-Z0-9_-]{20,}['"]?"#).unwrap(), "Generic API"),
+        (
+            Regex::new(r#"(?i)api[_-]?key['"]?\s*[:=]\s*['"]?[a-zA-Z0-9_-]{20,}['"]?"#).unwrap(),
+            "Generic API",
+        ),
         // Generic secret pattern
-        (Regex::new(r#"(?i)(?:secret|password|passwd|pwd)[_-]?['"]?\s*[:=]\s*['"]?[^\s'"]{8,}['"]?"#).unwrap(), "Generic Secret"),
+        (
+            Regex::new(
+                r#"(?i)(?:secret|password|passwd|pwd)[_-]?['"]?\s*[:=]\s*['"]?[^\s'"]{8,}['"]?"#,
+            )
+            .unwrap(),
+            "Generic Secret",
+        ),
     ]
 });
 
 // Private key patterns
 static PRIVATE_KEY_PATTERNS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
     vec![
-        (Regex::new(r"-----BEGIN RSA PRIVATE KEY-----").unwrap(), "RSA"),
-        (Regex::new(r"-----BEGIN DSA PRIVATE KEY-----").unwrap(), "DSA"),
+        (
+            Regex::new(r"-----BEGIN RSA PRIVATE KEY-----").unwrap(),
+            "RSA",
+        ),
+        (
+            Regex::new(r"-----BEGIN DSA PRIVATE KEY-----").unwrap(),
+            "DSA",
+        ),
         (Regex::new(r"-----BEGIN EC PRIVATE KEY-----").unwrap(), "EC"),
-        (Regex::new(r"-----BEGIN OPENSSH PRIVATE KEY-----").unwrap(), "OpenSSH"),
-        (Regex::new(r"-----BEGIN PGP PRIVATE KEY BLOCK-----").unwrap(), "PGP"),
+        (
+            Regex::new(r"-----BEGIN OPENSSH PRIVATE KEY-----").unwrap(),
+            "OpenSSH",
+        ),
+        (
+            Regex::new(r"-----BEGIN PGP PRIVATE KEY BLOCK-----").unwrap(),
+            "PGP",
+        ),
         (Regex::new(r"-----BEGIN PRIVATE KEY-----").unwrap(), "PKCS8"),
-        (Regex::new(r"-----BEGIN ENCRYPTED PRIVATE KEY-----").unwrap(), "Encrypted PKCS8"),
+        (
+            Regex::new(r"-----BEGIN ENCRYPTED PRIVATE KEY-----").unwrap(),
+            "Encrypted PKCS8",
+        ),
     ]
 });
 
 // Email pattern for bulk detection
-static EMAIL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b").unwrap()
-});
+static EMAIL_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b").unwrap());
 
 /// Sensitive data detector
 pub struct SensitiveDataDetector {
@@ -203,7 +265,11 @@ impl SensitiveDataDetector {
                     matched_value: mask_card_number(number),
                     location: "response_body".to_string(),
                     base_score: 9,
-                    tags: vec!["sensitive-data".to_string(), "credit-card".to_string(), "pci".to_string()],
+                    tags: vec![
+                        "sensitive-data".to_string(),
+                        "credit-card".to_string(),
+                        "pci".to_string(),
+                    ],
                 });
             }
         }
@@ -221,7 +287,11 @@ impl SensitiveDataDetector {
                     matched_value: mask_card_number(number),
                     location: "response_body".to_string(),
                     base_score: 9,
-                    tags: vec!["sensitive-data".to_string(), "credit-card".to_string(), "pci".to_string()],
+                    tags: vec![
+                        "sensitive-data".to_string(),
+                        "credit-card".to_string(),
+                        "pci".to_string(),
+                    ],
                 });
             }
         }
@@ -245,7 +315,11 @@ impl SensitiveDataDetector {
                     matched_value: mask_ssn(ssn),
                     location: "response_body".to_string(),
                     base_score: 9,
-                    tags: vec!["sensitive-data".to_string(), "ssn".to_string(), "pii".to_string()],
+                    tags: vec![
+                        "sensitive-data".to_string(),
+                        "ssn".to_string(),
+                        "pii".to_string(),
+                    ],
                 });
             }
         }
@@ -267,7 +341,11 @@ impl SensitiveDataDetector {
                     matched_value: mask_api_key(key),
                     location: "response_body".to_string(),
                     base_score: 8,
-                    tags: vec!["sensitive-data".to_string(), "api-key".to_string(), provider.to_lowercase()],
+                    tags: vec![
+                        "sensitive-data".to_string(),
+                        "api-key".to_string(),
+                        provider.to_lowercase(),
+                    ],
                 });
             }
         }
@@ -288,7 +366,11 @@ impl SensitiveDataDetector {
                     matched_value: format!("-----BEGIN {} PRIVATE KEY-----", key_type),
                     location: "response_body".to_string(),
                     base_score: 10,
-                    tags: vec!["sensitive-data".to_string(), "private-key".to_string(), "critical".to_string()],
+                    tags: vec![
+                        "sensitive-data".to_string(),
+                        "private-key".to_string(),
+                        "critical".to_string(),
+                    ],
                 });
             }
         }
@@ -309,7 +391,11 @@ impl SensitiveDataDetector {
                 matched_value: format!("{} email addresses detected", email_count),
                 location: "response_body".to_string(),
                 base_score: 7,
-                tags: vec!["sensitive-data".to_string(), "email".to_string(), "pii".to_string()],
+                tags: vec![
+                    "sensitive-data".to_string(),
+                    "email".to_string(),
+                    "pii".to_string(),
+                ],
             });
         }
 
@@ -410,7 +496,11 @@ fn luhn_check(number: &str) -> bool {
         .map(|(i, &d)| {
             if i % 2 == 1 {
                 let doubled = d * 2;
-                if doubled > 9 { doubled - 9 } else { doubled }
+                if doubled > 9 {
+                    doubled - 9
+                } else {
+                    doubled
+                }
             } else {
                 d
             }
@@ -426,9 +516,12 @@ fn identify_card_type(number: &str) -> String {
 
     if digits.starts_with('4') {
         "Visa".to_string()
-    } else if digits.starts_with("51") || digits.starts_with("52") ||
-              digits.starts_with("53") || digits.starts_with("54") ||
-              digits.starts_with("55") {
+    } else if digits.starts_with("51")
+        || digits.starts_with("52")
+        || digits.starts_with("53")
+        || digits.starts_with("54")
+        || digits.starts_with("55")
+    {
         "Mastercard".to_string()
     } else if digits.starts_with("34") || digits.starts_with("37") {
         "American Express".to_string()
@@ -436,8 +529,7 @@ fn identify_card_type(number: &str) -> String {
         "Discover".to_string()
     } else if digits.starts_with("35") {
         "JCB".to_string()
-    } else if digits.starts_with("30") || digits.starts_with("36") ||
-              digits.starts_with("38") {
+    } else if digits.starts_with("30") || digits.starts_with("36") || digits.starts_with("38") {
         "Diners Club".to_string()
     } else {
         "Unknown".to_string()
@@ -477,7 +569,7 @@ fn mask_card_number(number: &str) -> String {
     if digits.len() < 4 {
         return "****".to_string();
     }
-    format!("****-****-****-{}", &digits[digits.len()-4..])
+    format!("****-****-****-{}", &digits[digits.len() - 4..])
 }
 
 /// Mask SSN for logging
@@ -486,7 +578,7 @@ fn mask_ssn(ssn: &str) -> String {
     if digits.len() < 4 {
         return "***-**-****".to_string();
     }
-    format!("***-**-{}", &digits[digits.len()-4..])
+    format!("***-**-{}", &digits[digits.len() - 4..])
 }
 
 /// Mask API key for logging
@@ -494,7 +586,7 @@ fn mask_api_key(key: &str) -> String {
     if key.len() <= 8 {
         return "********".to_string();
     }
-    format!("{}...{}", &key[..4], &key[key.len()-4..])
+    format!("{}...{}", &key[..4], &key[key.len() - 4..])
 }
 
 #[cfg(test)]
@@ -506,7 +598,7 @@ mod tests {
         // Valid test card numbers
         assert!(luhn_check("4111111111111111")); // Visa test
         assert!(luhn_check("5500000000000004")); // Mastercard test
-        assert!(luhn_check("340000000000009"));  // Amex test
+        assert!(luhn_check("340000000000009")); // Amex test
 
         // Invalid numbers
         assert!(!luhn_check("1234567890123456"));
@@ -587,7 +679,9 @@ mod tests {
         let detections = detector.scan(content);
 
         assert!(!detections.is_empty());
-        assert!(detections.iter().any(|d| d.tags.contains(&"github".to_string())));
+        assert!(detections
+            .iter()
+            .any(|d| d.tags.contains(&"github".to_string())));
     }
 
     #[test]
@@ -614,7 +708,8 @@ MIIEpAIBAAKCAQEA0Z3TS...
         };
         let detector = SensitiveDataDetector::new(config);
 
-        let content = "Users: john@example.com, jane@example.com, bob@example.com, alice@example.com";
+        let content =
+            "Users: john@example.com, jane@example.com, bob@example.com, alice@example.com";
         let detections = detector.scan(content);
 
         assert!(detections.iter().any(|d| d.rule_id == 95101));
@@ -645,7 +740,9 @@ MIIEpAIBAAKCAQEA0Z3TS...
         let matches = detector.scan_detailed(content);
 
         assert!(!matches.is_empty());
-        assert!(matches.iter().any(|m| matches!(m.data_type, SensitiveDataType::CreditCard { .. })));
+        assert!(matches
+            .iter()
+            .any(|m| matches!(m.data_type, SensitiveDataType::CreditCard { .. })));
     }
 
     #[test]

@@ -18,7 +18,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .owasp("A03:2021-Injection")
             .tags(&["sqli", "sqli-destructive"])
             .build()?,
-
         RuleBuilder::new(942121, "SQL Injection: DELETE statement")
             .description("Detects DELETE FROM attempts")
             .attack_type(AttackType::SqlInjection)
@@ -30,7 +29,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-destructive"])
             .build()?,
-
         RuleBuilder::new(942122, "SQL Injection: UPDATE statement")
             .description("Detects UPDATE SET attempts")
             .attack_type(AttackType::SqlInjection)
@@ -42,7 +40,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-destructive"])
             .build()?,
-
         RuleBuilder::new(942123, "SQL Injection: INSERT statement")
             .description("Detects INSERT INTO attempts")
             .attack_type(AttackType::SqlInjection)
@@ -54,7 +51,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-destructive"])
             .build()?,
-
         RuleBuilder::new(942124, "SQL Injection: ALTER statement")
             .description("Detects ALTER TABLE attempts")
             .attack_type(AttackType::SqlInjection)
@@ -66,7 +62,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-destructive"])
             .build()?,
-
         RuleBuilder::new(942125, "SQL Injection: TRUNCATE statement")
             .description("Detects TRUNCATE TABLE attempts")
             .attack_type(AttackType::SqlInjection)
@@ -78,7 +73,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-destructive"])
             .build()?,
-
         // Error-based extraction
         RuleBuilder::new(942130, "SQL Injection: EXTRACTVALUE/UPDATEXML")
             .description("Detects MySQL error-based extraction functions")
@@ -91,7 +85,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-error", "mysql"])
             .build()?,
-
         RuleBuilder::new(942131, "SQL Injection: CONVERT/CAST error")
             .description("Detects error-based injection via type conversion")
             .attack_type(AttackType::SqlInjection)
@@ -103,7 +96,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-error"])
             .build()?,
-
         RuleBuilder::new(942132, "SQL Injection: EXP/FLOOR error overflow")
             .description("Detects MySQL error-based injection via math overflow")
             .attack_type(AttackType::SqlInjection)
@@ -115,7 +107,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-error", "mysql"])
             .build()?,
-
         RuleBuilder::new(942133, "SQL Injection: XMLType error (Oracle)")
             .description("Detects Oracle XMLType error-based injection")
             .attack_type(AttackType::SqlInjection)
@@ -127,7 +118,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-error", "oracle"])
             .build()?,
-
         // MSSQL specific
         RuleBuilder::new(942140, "SQL Injection: xp_cmdshell")
             .description("Detects MSSQL command execution via xp_cmdshell")
@@ -140,7 +130,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-rce", "mssql"])
             .build()?,
-
         RuleBuilder::new(942141, "SQL Injection: sp_executesql")
             .description("Detects MSSQL dynamic SQL execution")
             .attack_type(AttackType::SqlInjection)
@@ -152,7 +141,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "mssql"])
             .build()?,
-
         // PostgreSQL specific
         RuleBuilder::new(942145, "SQL Injection: PostgreSQL COPY")
             .description("Detects PostgreSQL file read/write via COPY")
@@ -165,7 +153,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-file", "postgresql"])
             .build()?,
-
         RuleBuilder::new(942146, "SQL Injection: PostgreSQL lo_export")
             .description("Detects PostgreSQL large object file operations")
             .attack_type(AttackType::SqlInjection)

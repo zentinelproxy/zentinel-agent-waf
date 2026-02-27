@@ -7,11 +7,11 @@
 //! - Stacked queries
 //! - NoSQL injection
 
-mod union_based;
-mod error_based;
 mod blind;
-mod stacked;
+mod error_based;
 mod nosql;
+mod stacked;
+mod union_based;
 
 use super::Rule;
 use anyhow::Result;
@@ -35,14 +35,31 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
 
 /// Common SQL keywords for detection
 pub const SQL_KEYWORDS: &[&str] = &[
-    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
-    "UNION", "FROM", "WHERE", "AND", "OR", "ORDER", "GROUP", "HAVING",
-    "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "LIMIT", "OFFSET",
+    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "UNION", "FROM", "WHERE",
+    "AND", "OR", "ORDER", "GROUP", "HAVING", "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "LIMIT",
+    "OFFSET",
 ];
 
 /// Common SQL functions
 pub const SQL_FUNCTIONS: &[&str] = &[
-    "CONCAT", "SUBSTRING", "ASCII", "CHAR", "LENGTH", "COUNT", "SUM",
-    "AVG", "MIN", "MAX", "SLEEP", "BENCHMARK", "WAITFOR", "DELAY",
-    "IF", "CASE", "WHEN", "THEN", "ELSE", "END",
+    "CONCAT",
+    "SUBSTRING",
+    "ASCII",
+    "CHAR",
+    "LENGTH",
+    "COUNT",
+    "SUM",
+    "AVG",
+    "MIN",
+    "MAX",
+    "SLEEP",
+    "BENCHMARK",
+    "WAITFOR",
+    "DELAY",
+    "IF",
+    "CASE",
+    "WHEN",
+    "THEN",
+    "ELSE",
+    "END",
 ];

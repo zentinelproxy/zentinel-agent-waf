@@ -1,6 +1,7 @@
 //! ML-Based Attack Classifier
 //!
 //! Uses character n-gram statistics to detect attack patterns.
+#![allow(dead_code)]
 //! The classifier maintains learned patterns for each attack type
 //! and scores new inputs based on similarity to known attacks.
 //!
@@ -130,69 +131,178 @@ impl AttackClassifier {
     /// Initialize with known attack patterns
     fn initialize_patterns(&mut self) {
         // SQL Injection patterns
-        self.add_attack_patterns(AttackType::SqlInjection, &[
-            // Basic SQL keywords
-            "select", "union", "insert", "update", "delete", "drop", "truncate",
-            "from", "where", "and", "or", "having", "group by", "order by",
-            // Common injection fragments
-            "' or '", "' and '", "1=1", "1'='1", "' --", "'; --", "/**/",
-            "' or 1=1", "admin'--", "' union select", "concat(",
-            // Functions and operators
-            "char(", "ascii(", "substring(", "length(", "benchmark(",
-            "sleep(", "waitfor", "pg_sleep", "dbms_pipe",
-            // Error-based
-            "extractvalue(", "updatexml(", "exp(~",
-            // Database-specific
-            "information_schema", "sys.tables", "sqlite_master",
-            "@@version", "version()", "database()", "user()",
-        ]);
+        self.add_attack_patterns(
+            AttackType::SqlInjection,
+            &[
+                // Basic SQL keywords
+                "select",
+                "union",
+                "insert",
+                "update",
+                "delete",
+                "drop",
+                "truncate",
+                "from",
+                "where",
+                "and",
+                "or",
+                "having",
+                "group by",
+                "order by",
+                // Common injection fragments
+                "' or '",
+                "' and '",
+                "1=1",
+                "1'='1",
+                "' --",
+                "'; --",
+                "/**/",
+                "' or 1=1",
+                "admin'--",
+                "' union select",
+                "concat(",
+                // Functions and operators
+                "char(",
+                "ascii(",
+                "substring(",
+                "length(",
+                "benchmark(",
+                "sleep(",
+                "waitfor",
+                "pg_sleep",
+                "dbms_pipe",
+                // Error-based
+                "extractvalue(",
+                "updatexml(",
+                "exp(~",
+                // Database-specific
+                "information_schema",
+                "sys.tables",
+                "sqlite_master",
+                "@@version",
+                "version()",
+                "database()",
+                "user()",
+            ],
+        );
 
         // XSS patterns
-        self.add_attack_patterns(AttackType::Xss, &[
-            // Script tags
-            "<script", "</script>", "javascript:", "vbscript:",
-            // Event handlers
-            "onerror=", "onload=", "onclick=", "onmouseover=", "onfocus=",
-            "onblur=", "onchange=", "onsubmit=", "onkeypress=", "onkeyup=",
-            // Common payloads
-            "alert(", "prompt(", "confirm(", "eval(", "document.",
-            "window.", ".cookie", "innerhtml", "outerhtml",
-            // Encoding tricks
-            "&#x", "&#", "\\x", "\\u00",
-            // SVG/math vectors
-            "<svg", "<math", "<img src=x", "<body onload",
-            // Data URIs
-            "data:text/html", "data:application/",
-        ]);
+        self.add_attack_patterns(
+            AttackType::Xss,
+            &[
+                // Script tags
+                "<script",
+                "</script>",
+                "javascript:",
+                "vbscript:",
+                // Event handlers
+                "onerror=",
+                "onload=",
+                "onclick=",
+                "onmouseover=",
+                "onfocus=",
+                "onblur=",
+                "onchange=",
+                "onsubmit=",
+                "onkeypress=",
+                "onkeyup=",
+                // Common payloads
+                "alert(",
+                "prompt(",
+                "confirm(",
+                "eval(",
+                "document.",
+                "window.",
+                ".cookie",
+                "innerhtml",
+                "outerhtml",
+                // Encoding tricks
+                "&#x",
+                "&#",
+                "\\x",
+                "\\u00",
+                // SVG/math vectors
+                "<svg",
+                "<math",
+                "<img src=x",
+                "<body onload",
+                // Data URIs
+                "data:text/html",
+                "data:application/",
+            ],
+        );
 
         // Command injection patterns
-        self.add_attack_patterns(AttackType::CommandInjection, &[
-            // Shell metacharacters
-            "; ", "| ", "|| ", "&& ", "` ", "$(",
-            // Common commands
-            "/bin/sh", "/bin/bash", "cmd.exe", "powershell",
-            "cat /etc", "type ", "dir ", "ls ", "whoami", "id ",
-            "wget ", "curl ", "nc ", "ncat", "netcat",
-            // Reverse shells
-            "bash -i", "/dev/tcp", "mkfifo", "telnet ",
-            // Environment
-            "$path", "$home", "%systemroot%", "%comspec%",
-        ]);
+        self.add_attack_patterns(
+            AttackType::CommandInjection,
+            &[
+                // Shell metacharacters
+                "; ",
+                "| ",
+                "|| ",
+                "&& ",
+                "` ",
+                "$(",
+                // Common commands
+                "/bin/sh",
+                "/bin/bash",
+                "cmd.exe",
+                "powershell",
+                "cat /etc",
+                "type ",
+                "dir ",
+                "ls ",
+                "whoami",
+                "id ",
+                "wget ",
+                "curl ",
+                "nc ",
+                "ncat",
+                "netcat",
+                // Reverse shells
+                "bash -i",
+                "/dev/tcp",
+                "mkfifo",
+                "telnet ",
+                // Environment
+                "$path",
+                "$home",
+                "%systemroot%",
+                "%comspec%",
+            ],
+        );
 
         // Path traversal patterns
-        self.add_attack_patterns(AttackType::PathTraversal, &[
-            // Directory traversal
-            "../", "..\\", "....//", "....\\\\",
-            // Encoded variants
-            "%2e%2e", "%252e", "..%c0%af", "..%255c",
-            // Null bytes
-            "%00", "\x00",
-            // Common targets
-            "/etc/passwd", "/etc/shadow", "win.ini", "boot.ini",
-            "/proc/self", "/var/log",
-            // Wrapper protocols
-            "file://", "php://", "zip://", "data://",
-        ]);
+        self.add_attack_patterns(
+            AttackType::PathTraversal,
+            &[
+                // Directory traversal
+                "../",
+                "..\\",
+                "....//",
+                "....\\\\",
+                // Encoded variants
+                "%2e%2e",
+                "%252e",
+                "..%c0%af",
+                "..%255c",
+                // Null bytes
+                "%00",
+                "\x00",
+                // Common targets
+                "/etc/passwd",
+                "/etc/shadow",
+                "win.ini",
+                "boot.ini",
+                "/proc/self",
+                "/var/log",
+                // Wrapper protocols
+                "file://",
+                "php://",
+                "zip://",
+                "data://",
+            ],
+        );
     }
 
     /// Add patterns for an attack type
@@ -215,7 +325,11 @@ impl AttackClassifier {
         }
 
         // Normalize weights
-        let max_weight = stats.malicious_ngrams.values().cloned().fold(0.0f32, f32::max);
+        let max_weight = stats
+            .malicious_ngrams
+            .values()
+            .cloned()
+            .fold(0.0f32, f32::max);
         if max_weight > 0.0 {
             for weight in stats.malicious_ngrams.values_mut() {
                 *weight /= max_weight;
@@ -319,7 +433,7 @@ impl AttackClassifier {
             * coverage_bonus;
 
         // Clamp to 0.0 - 1.0
-        raw_score.min(1.0).max(0.0)
+        raw_score.clamp(0.0, 1.0)
     }
 
     /// Get the n-grams that contributed most to the prediction
@@ -355,14 +469,26 @@ mod tests {
 
         // Should detect SQLi - using lower threshold since this is statistical
         let result = classifier.classify("' OR 1=1 --");
-        assert!(result.sqli_score > 0.05, "sqli_score for OR 1=1: {}", result.sqli_score);
+        assert!(
+            result.sqli_score > 0.05,
+            "sqli_score for OR 1=1: {}",
+            result.sqli_score
+        );
 
         let result = classifier.classify("UNION SELECT password FROM users");
-        assert!(result.sqli_score > 0.05, "sqli_score for UNION SELECT: {}", result.sqli_score);
+        assert!(
+            result.sqli_score > 0.05,
+            "sqli_score for UNION SELECT: {}",
+            result.sqli_score
+        );
 
         // Case variations should also work
         let result = classifier.classify("UnIoN SeLeCt password FROM users");
-        assert!(result.sqli_score > 0.05, "sqli_score for mixed case: {}", result.sqli_score);
+        assert!(
+            result.sqli_score > 0.05,
+            "sqli_score for mixed case: {}",
+            result.sqli_score
+        );
     }
 
     #[test]
@@ -370,10 +496,18 @@ mod tests {
         let classifier = AttackClassifier::new();
 
         let result = classifier.classify("<script>alert('XSS')</script>");
-        assert!(result.xss_score > 0.05, "xss_score for script: {}", result.xss_score);
+        assert!(
+            result.xss_score > 0.05,
+            "xss_score for script: {}",
+            result.xss_score
+        );
 
         let result = classifier.classify("<img src=x onerror=alert(1)>");
-        assert!(result.xss_score > 0.05, "xss_score for img onerror: {}", result.xss_score);
+        assert!(
+            result.xss_score > 0.05,
+            "xss_score for img onerror: {}",
+            result.xss_score
+        );
     }
 
     #[test]
@@ -381,10 +515,18 @@ mod tests {
         let classifier = AttackClassifier::new();
 
         let result = classifier.classify("; cat /etc/passwd");
-        assert!(result.cmd_injection_score > 0.05, "cmd_score for cat: {}", result.cmd_injection_score);
+        assert!(
+            result.cmd_injection_score > 0.05,
+            "cmd_score for cat: {}",
+            result.cmd_injection_score
+        );
 
         let result = classifier.classify("| whoami");
-        assert!(result.cmd_injection_score > 0.05, "cmd_score for whoami: {}", result.cmd_injection_score);
+        assert!(
+            result.cmd_injection_score > 0.05,
+            "cmd_score for whoami: {}",
+            result.cmd_injection_score
+        );
     }
 
     #[test]
@@ -392,10 +534,18 @@ mod tests {
         let classifier = AttackClassifier::new();
 
         let result = classifier.classify("../../../etc/passwd");
-        assert!(result.path_traversal_score > 0.05, "traversal_score for ../: {}", result.path_traversal_score);
+        assert!(
+            result.path_traversal_score > 0.05,
+            "traversal_score for ../: {}",
+            result.path_traversal_score
+        );
 
         let result = classifier.classify("..%2f..%2f..%2fetc/passwd");
-        assert!(result.path_traversal_score > 0.01, "traversal_score for %2f: {}", result.path_traversal_score);
+        assert!(
+            result.path_traversal_score > 0.01,
+            "traversal_score for %2f: {}",
+            result.path_traversal_score
+        );
     }
 
     #[test]
@@ -415,7 +565,11 @@ mod tests {
 
         // Comment-based obfuscation - lower threshold as obfuscation reduces signal
         let result = classifier.classify("SELECT/**/password/**/FROM/**/users");
-        assert!(result.sqli_score > 0.01, "sqli_score for obfuscated: {}", result.sqli_score);
+        assert!(
+            result.sqli_score > 0.01,
+            "sqli_score for obfuscated: {}",
+            result.sqli_score
+        );
     }
 
     #[test]

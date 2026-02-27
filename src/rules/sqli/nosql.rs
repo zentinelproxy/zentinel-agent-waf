@@ -17,7 +17,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943) // NoSQL Injection
             .tags(&["nosql", "mongodb"])
             .build()?,
-
         RuleBuilder::new(942201, "NoSQL Injection: MongoDB $where JS")
             .description("Detects MongoDB $where with JavaScript execution")
             .attack_type(AttackType::SqlInjection)
@@ -29,7 +28,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "mongodb", "rce"])
             .build()?,
-
         RuleBuilder::new(942202, "NoSQL Injection: MongoDB mapReduce")
             .description("Detects MongoDB mapReduce injection")
             .attack_type(AttackType::SqlInjection)
@@ -41,7 +39,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "mongodb", "rce"])
             .build()?,
-
         RuleBuilder::new(942203, "NoSQL Injection: MongoDB $regex DoS")
             .description("Detects potential ReDoS via $regex")
             .attack_type(AttackType::SqlInjection)
@@ -53,7 +50,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "mongodb", "dos"])
             .build()?,
-
         RuleBuilder::new(942204, "NoSQL Injection: JSON operator injection")
             .description("Detects JSON-based operator injection patterns")
             .attack_type(AttackType::SqlInjection)
@@ -65,7 +61,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "json"])
             .build()?,
-
         // Redis injection
         RuleBuilder::new(942210, "NoSQL Injection: Redis command")
             .description("Detects Redis command injection")
@@ -73,12 +68,13 @@ pub fn rules() -> Result<Vec<Rule>> {
             .severity(Severity::Critical)
             .confidence(Confidence::High)
             .paranoia(1)
-            .pattern(r"(?i)\b(EVAL|EVALSHA|CONFIG|FLUSHALL|FLUSHDB|DEBUG|SHUTDOWN|SLAVEOF|REPLICAOF)\b")
+            .pattern(
+                r"(?i)\b(EVAL|EVALSHA|CONFIG|FLUSHALL|FLUSHDB|DEBUG|SHUTDOWN|SLAVEOF|REPLICAOF)\b",
+            )
             .base_score(10)
             .cwe(943)
             .tags(&["nosql", "redis"])
             .build()?,
-
         RuleBuilder::new(942211, "NoSQL Injection: Redis Lua script")
             .description("Detects Redis Lua script injection")
             .attack_type(AttackType::SqlInjection)
@@ -90,7 +86,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "redis", "lua"])
             .build()?,
-
         // CouchDB
         RuleBuilder::new(942220, "NoSQL Injection: CouchDB view")
             .description("Detects CouchDB view injection")
@@ -103,7 +98,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "couchdb"])
             .build()?,
-
         // Cassandra
         RuleBuilder::new(942230, "NoSQL Injection: Cassandra CQL")
             .description("Detects Cassandra CQL injection patterns")
@@ -116,7 +110,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "cassandra"])
             .build()?,
-
         // Elasticsearch
         RuleBuilder::new(942240, "NoSQL Injection: Elasticsearch script")
             .description("Detects Elasticsearch script injection")
@@ -129,7 +122,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(943)
             .tags(&["nosql", "elasticsearch", "rce"])
             .build()?,
-
         RuleBuilder::new(942241, "NoSQL Injection: Elasticsearch _search")
             .description("Detects Elasticsearch search API abuse")
             .attack_type(AttackType::SqlInjection)

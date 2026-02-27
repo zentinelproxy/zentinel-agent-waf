@@ -171,7 +171,10 @@ impl ContentType {
             Self::MultipartForm
         } else if lower.contains("application/json") || lower.contains("+json") {
             Self::Json
-        } else if lower.contains("application/xml") || lower.contains("+xml") || lower.contains("text/xml") {
+        } else if lower.contains("application/xml")
+            || lower.contains("+xml")
+            || lower.contains("text/xml")
+        {
             Self::Xml
         } else if lower.contains("text/html") {
             Self::Html
@@ -189,11 +192,11 @@ impl ContentType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BodySizeCategory {
     None,
-    Tiny,    // < 256 bytes
-    Small,   // < 4KB
-    Medium,  // < 64KB
-    Large,   // < 1MB
-    Huge,    // >= 1MB
+    Tiny,   // < 256 bytes
+    Small,  // < 4KB
+    Medium, // < 64KB
+    Large,  // < 1MB
+    Huge,   // >= 1MB
 }
 
 impl BodySizeCategory {
@@ -237,7 +240,11 @@ impl Default for EndpointBaseline {
             common_header_orders: Vec::new(),
             expected_headers: HashMap::new(),
             expected_methods: vec![HttpMethod::Get, HttpMethod::Post],
-            expected_content_types: vec![ContentType::None, ContentType::FormUrlEncoded, ContentType::Json],
+            expected_content_types: vec![
+                ContentType::None,
+                ContentType::FormUrlEncoded,
+                ContentType::Json,
+            ],
             param_count_range: (0, 20),
             query_entropy_range: (0.0, 5.0),
             sample_count: 0,
@@ -255,10 +262,13 @@ impl EndpointBaseline {
         self.header_count_range.1 = self.header_count_range.1.max(fingerprint.header_count);
 
         // Track header order
-        if !self.common_header_orders.contains(&fingerprint.header_order_hash) {
-            if self.common_header_orders.len() < 100 {
-                self.common_header_orders.push(fingerprint.header_order_hash);
-            }
+        if !self
+            .common_header_orders
+            .contains(&fingerprint.header_order_hash)
+            && self.common_header_orders.len() < 100
+        {
+            self.common_header_orders
+                .push(fingerprint.header_order_hash);
         }
 
         // Track expected headers
@@ -274,7 +284,10 @@ impl EndpointBaseline {
         }
 
         // Track content types
-        if !self.expected_content_types.contains(&fingerprint.content_type) {
+        if !self
+            .expected_content_types
+            .contains(&fingerprint.content_type)
+        {
             self.expected_content_types.push(fingerprint.content_type);
         }
 
@@ -312,9 +325,7 @@ impl FingerprintBaseline {
     /// Learn from a request fingerprint
     pub fn learn(&mut self, endpoint: &str, fingerprint: &RequestFingerprint) {
         // Update endpoint-specific baseline
-        let baseline = self.endpoints
-            .entry(endpoint.to_string())
-            .or_insert_with(EndpointBaseline::default);
+        let baseline = self.endpoints.entry(endpoint.to_string()).or_default();
         baseline.learn(fingerprint);
 
         // Update global baseline
@@ -323,7 +334,8 @@ impl FingerprintBaseline {
 
     /// Calculate anomaly score for a fingerprint
     pub fn anomaly_score(&self, endpoint: &str, fingerprint: &RequestFingerprint) -> AnomalyResult {
-        let baseline = self.endpoints
+        let baseline = self
+            .endpoints
             .get(endpoint)
             .filter(|b| b.sample_count >= self.min_samples)
             .unwrap_or(&self.global);
@@ -341,7 +353,9 @@ impl FingerprintBaseline {
 
         // Check header order (bot detection)
         if !baseline.common_header_orders.is_empty()
-            && !baseline.common_header_orders.contains(&fingerprint.header_order_hash)
+            && !baseline
+                .common_header_orders
+                .contains(&fingerprint.header_order_hash)
         {
             total_score += 0.15;
             anomalies.push(AnomalyFactor::UnusualHeaderOrder);
@@ -355,7 +369,9 @@ impl FingerprintBaseline {
 
         // Check content type
         if fingerprint.content_type != ContentType::None
-            && !baseline.expected_content_types.contains(&fingerprint.content_type)
+            && !baseline
+                .expected_content_types
+                .contains(&fingerprint.content_type)
         {
             total_score += 0.15;
             anomalies.push(AnomalyFactor::UnexpectedContentType);
@@ -376,7 +392,8 @@ impl FingerprintBaseline {
         }
 
         // Check for missing expected headers
-        let missing_expected = baseline.expected_headers
+        let missing_expected = baseline
+            .expected_headers
             .iter()
             .filter(|(hash, freq)| **freq > 0.8 && !fingerprint.header_presence.contains(hash))
             .count();
@@ -476,13 +493,17 @@ mod tests {
     use super::*;
 
     fn make_headers(names: &[&str]) -> HashMap<String, Vec<String>> {
-        names.iter().map(|n| (n.to_string(), vec!["value".to_string()])).collect()
+        names
+            .iter()
+            .map(|n| (n.to_string(), vec!["value".to_string()]))
+            .collect()
     }
 
     #[test]
     fn test_fingerprint_creation() {
         let headers = make_headers(&["Host", "User-Agent", "Accept"]);
-        let fp = RequestFingerprint::from_request("GET", "/api/users", Some("id=1"), &headers, None);
+        let fp =
+            RequestFingerprint::from_request("GET", "/api/users", Some("id=1"), &headers, None);
 
         assert_eq!(fp.method, HttpMethod::Get);
         assert_eq!(fp.header_count, 3);
@@ -495,7 +516,10 @@ mod tests {
     fn test_content_type_detection() {
         let headers = make_headers(&["Content-Type"]);
         let mut headers = headers;
-        headers.insert("Content-Type".to_string(), vec!["application/json".to_string()]);
+        headers.insert(
+            "Content-Type".to_string(),
+            vec!["application/json".to_string()],
+        );
 
         let fp = RequestFingerprint::from_request("POST", "/api", None, &headers, Some(100));
         assert_eq!(fp.content_type, ContentType::Json);
@@ -509,17 +533,30 @@ mod tests {
         // Learn normal requests
         let headers = make_headers(&["Host", "User-Agent", "Accept"]);
         for _ in 0..5 {
-            let fp = RequestFingerprint::from_request("GET", "/api/users", Some("page=1"), &headers, None);
+            let fp = RequestFingerprint::from_request(
+                "GET",
+                "/api/users",
+                Some("page=1"),
+                &headers,
+                None,
+            );
             baseline.learn("/api/users", &fp);
         }
 
         // Test normal request
-        let normal_fp = RequestFingerprint::from_request("GET", "/api/users", Some("page=2"), &headers, None);
+        let normal_fp =
+            RequestFingerprint::from_request("GET", "/api/users", Some("page=2"), &headers, None);
         let result = baseline.anomaly_score("/api/users", &normal_fp);
         assert!(result.score < 0.3);
 
         // Test anomalous request (different method)
-        let anomalous_fp = RequestFingerprint::from_request("DELETE", "/api/users", Some("page=1"), &headers, None);
+        let anomalous_fp = RequestFingerprint::from_request(
+            "DELETE",
+            "/api/users",
+            Some("page=1"),
+            &headers,
+            None,
+        );
         let result = baseline.anomaly_score("/api/users", &anomalous_fp);
         assert!(result.factors.contains(&AnomalyFactor::UnexpectedMethod));
     }
@@ -540,6 +577,9 @@ mod tests {
         assert_eq!(BodySizeCategory::from_size(1000), BodySizeCategory::Small);
         assert_eq!(BodySizeCategory::from_size(10000), BodySizeCategory::Medium);
         assert_eq!(BodySizeCategory::from_size(100000), BodySizeCategory::Large);
-        assert_eq!(BodySizeCategory::from_size(10000000), BodySizeCategory::Huge);
+        assert_eq!(
+            BodySizeCategory::from_size(10000000),
+            BodySizeCategory::Huge
+        );
     }
 }

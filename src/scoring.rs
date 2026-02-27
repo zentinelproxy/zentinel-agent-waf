@@ -9,11 +9,7 @@ use crate::detection::{AnomalyScore, Detection, WafDecision};
 use crate::rules::Rule;
 
 /// Calculate anomaly score from detections
-pub fn calculate(
-    detections: &[Detection],
-    rules: &[Rule],
-    config: &ScoringConfig,
-) -> AnomalyScore {
+pub fn calculate(detections: &[Detection], rules: &[Rule], config: &ScoringConfig) -> AnomalyScore {
     let mut score = AnomalyScore::new();
 
     for detection in detections {
@@ -80,11 +76,7 @@ pub fn decide(
 pub mod utils {
     /// Calculate what score would be needed to trigger blocking
     pub fn score_to_block(current: u32, threshold: u32) -> u32 {
-        if current >= threshold {
-            0
-        } else {
-            threshold - current
-        }
+        threshold.saturating_sub(current)
     }
 
     /// Format score for display

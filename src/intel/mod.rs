@@ -1,6 +1,7 @@
 //! Threat Intelligence Module
 //!
 //! Provides real-time threat intelligence integration for enhanced detection:
+#![allow(dead_code)]
 //! - IP reputation feeds (malicious IPs, Tor exits, proxies)
 //! - Domain reputation (malware C2, phishing)
 //! - Indicator of Compromise (IoC) feeds
@@ -15,8 +16,8 @@
 pub mod feeds;
 pub mod reputation;
 
-pub use feeds::{ThreatFeed, FeedConfig, FeedType};
-pub use reputation::{IpReputation, DomainReputation, ReputationScore};
+pub use feeds::{FeedConfig, FeedType, ThreatFeed};
+pub use reputation::{DomainReputation, IpReputation, ReputationScore};
 
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
@@ -24,7 +25,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use parking_lot::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::detection::Detection;
 use crate::rules::AttackType;
@@ -57,7 +58,7 @@ impl Default for ThreatIntelConfig {
             ip_reputation_enabled: true,
             domain_reputation_enabled: true,
             ioc_enabled: true,
-            cache_ttl_secs: 3600,      // 1 hour
+            cache_ttl_secs: 3600,         // 1 hour
             refresh_interval_secs: 86400, // 24 hours
             block_threshold: 80,
             log_threshold: 50,
@@ -79,6 +80,7 @@ pub struct ThreatIntelEngine {
 }
 
 /// IP reputation database
+#[derive(Default)]
 struct IpReputationDb {
     /// Known malicious IPs with scores
     malicious_ips: HashMap<IpAddr, IpReputation>,
@@ -94,20 +96,8 @@ struct IpReputationDb {
     asn_scores: HashMap<u32, u8>,
 }
 
-impl Default for IpReputationDb {
-    fn default() -> Self {
-        Self {
-            malicious_ips: HashMap::new(),
-            tor_exits: HashSet::new(),
-            proxies: HashSet::new(),
-            vpn_endpoints: HashSet::new(),
-            cloud_ips: HashSet::new(),
-            asn_scores: HashMap::new(),
-        }
-    }
-}
-
 /// Domain reputation database
+#[derive(Default)]
 struct DomainReputationDb {
     /// Known malicious domains
     malicious_domains: HashMap<String, DomainReputation>,
@@ -119,18 +109,8 @@ struct DomainReputationDb {
     new_domains: HashSet<String>,
 }
 
-impl Default for DomainReputationDb {
-    fn default() -> Self {
-        Self {
-            malicious_domains: HashMap::new(),
-            phishing_domains: HashSet::new(),
-            c2_domains: HashSet::new(),
-            new_domains: HashSet::new(),
-        }
-    }
-}
-
 /// Indicator of Compromise database
+#[derive(Default)]
 struct IocDatabase {
     /// File hashes (SHA256)
     file_hashes: HashSet<String>,
@@ -140,17 +120,6 @@ struct IocDatabase {
     malicious_emails: HashSet<String>,
     /// Attack signatures
     signatures: Vec<IocSignature>,
-}
-
-impl Default for IocDatabase {
-    fn default() -> Self {
-        Self {
-            file_hashes: HashSet::new(),
-            malicious_urls: HashSet::new(),
-            malicious_emails: HashSet::new(),
-            signatures: Vec::new(),
-        }
-    }
 }
 
 /// IoC signature for pattern matching
@@ -208,12 +177,12 @@ impl ThreatIntelEngine {
 
         // Example: Known scanner IPs (these are fake examples)
         // Real deployment would fetch from threat feeds
-        ip_db.asn_scores.insert(4134, 60);  // Example high-risk ASN
-        ip_db.asn_scores.insert(4837, 55);  // Example moderate-risk ASN
+        ip_db.asn_scores.insert(4134, 60); // Example high-risk ASN
+        ip_db.asn_scores.insert(4837, 55); // Example moderate-risk ASN
 
         drop(ip_db);
 
-        let mut domain_db = self.domain_reputation.write();
+        let domain_db = self.domain_reputation.write();
 
         // Example malicious TLDs with higher baseline risk
         // (not blocking, just higher scrutiny)
@@ -256,7 +225,11 @@ impl ThreatIntelEngine {
                 matched_value: ip.to_string(),
                 location: "source_ip".to_string(),
                 base_score: 4, // Medium - not always malicious
-                tags: vec!["intel".to_string(), "tor".to_string(), "anonymizer".to_string()],
+                tags: vec![
+                    "intel".to_string(),
+                    "tor".to_string(),
+                    "anonymizer".to_string(),
+                ],
             });
         }
 
@@ -374,7 +347,11 @@ impl ThreatIntelEngine {
                 matched_value: url.to_string(),
                 location: "url".to_string(),
                 base_score: 9,
-                tags: vec!["intel".to_string(), "ioc".to_string(), "malicious-url".to_string()],
+                tags: vec![
+                    "intel".to_string(),
+                    "ioc".to_string(),
+                    "malicious-url".to_string(),
+                ],
             });
         }
 
@@ -398,7 +375,11 @@ impl ThreatIntelEngine {
                 matched_value: hash.to_string(),
                 location: "file_hash".to_string(),
                 base_score: 10,
-                tags: vec!["intel".to_string(), "ioc".to_string(), "malware".to_string()],
+                tags: vec![
+                    "intel".to_string(),
+                    "ioc".to_string(),
+                    "malware".to_string(),
+                ],
             });
         }
 
@@ -415,7 +396,9 @@ impl ThreatIntelEngine {
     /// Add a domain to the malicious list
     pub fn add_malicious_domain(&self, domain: String, reputation: DomainReputation) {
         let mut domain_db = self.domain_reputation.write();
-        domain_db.malicious_domains.insert(domain.to_lowercase(), reputation);
+        domain_db
+            .malicious_domains
+            .insert(domain.to_lowercase(), reputation);
         debug!(domain = domain, "Added malicious domain to threat intel");
     }
 

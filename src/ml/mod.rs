@@ -25,6 +25,6 @@ pub mod ngram;
 pub mod similarity;
 
 pub use classifier::{AttackClassifier, AttackPrediction, ClassifierConfig};
-pub use fingerprint::{RequestFingerprint, FingerprintBaseline, AnomalyResult};
+pub use fingerprint::{AnomalyResult, FingerprintBaseline, RequestFingerprint};
 pub use ngram::CharNGramTokenizer;
 pub use similarity::{PayloadSimilarity, SimilarityConfig};

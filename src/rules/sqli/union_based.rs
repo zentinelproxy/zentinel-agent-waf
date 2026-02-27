@@ -18,7 +18,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .owasp("A03:2021-Injection")
             .tags(&["sqli", "sqli-union", "owasp-top10"])
             .build()?,
-
         RuleBuilder::new(942101, "SQL Injection: UNION ALL SELECT")
             .description("Detects UNION ALL SELECT injection")
             .attack_type(AttackType::SqlInjection)
@@ -31,7 +30,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .owasp("A03:2021-Injection")
             .tags(&["sqli", "sqli-union"])
             .build()?,
-
         RuleBuilder::new(942102, "SQL Injection: UNION with column count")
             .description("Detects UNION with NULL columns for column counting")
             .attack_type(AttackType::SqlInjection)
@@ -43,7 +41,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-union"])
             .build()?,
-
         RuleBuilder::new(942103, "SQL Injection: SELECT FROM with WHERE")
             .description("Detects classic SELECT FROM WHERE pattern")
             .attack_type(AttackType::SqlInjection)
@@ -55,7 +52,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-select"])
             .build()?,
-
         RuleBuilder::new(942104, "SQL Injection: SELECT with information_schema")
             .description("Detects database enumeration via information_schema")
             .attack_type(AttackType::SqlInjection)
@@ -67,7 +63,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-enum", "database-enum"])
             .build()?,
-
         RuleBuilder::new(942105, "SQL Injection: UNION with ORDER BY")
             .description("Detects UNION-based injection with ORDER BY for column detection")
             .attack_type(AttackType::SqlInjection)
@@ -79,7 +74,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-union"])
             .build()?,
-
         // Medium confidence patterns
         RuleBuilder::new(942110, "SQL Injection: SELECT with concat")
             .description("Detects SELECT with string concatenation")
@@ -92,7 +86,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-select"])
             .build()?,
-
         RuleBuilder::new(942111, "SQL Injection: UNION with comments")
             .description("Detects UNION-based injection with inline comments")
             .attack_type(AttackType::SqlInjection)
@@ -104,7 +97,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-union", "sqli-evasion"])
             .build()?,
-
         RuleBuilder::new(942112, "SQL Injection: Case variation evasion")
             .description("Detects SQL keywords with unusual case patterns")
             .attack_type(AttackType::SqlInjection)
@@ -116,7 +108,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-evasion"])
             .build()?,
-
         RuleBuilder::new(942113, "SQL Injection: URL-encoded UNION")
             .description("Detects URL-encoded UNION SELECT")
             .attack_type(AttackType::SqlInjection)
@@ -128,7 +119,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-union", "sqli-encoded"])
             .build()?,
-
         RuleBuilder::new(942114, "SQL Injection: Double URL-encoded UNION")
             .description("Detects double URL-encoded SQL injection")
             .attack_type(AttackType::SqlInjection)

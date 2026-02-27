@@ -5,8 +5,8 @@
 //! - SSRF (Server-Side Request Forgery)
 //! - Insecure deserialization
 
-pub mod ssrf;
 pub mod deserialization;
+pub mod ssrf;
 
 use crate::rules::{AttackType, Confidence, Rule, RuleBuilder, Severity};
 use anyhow::Result;

@@ -219,7 +219,12 @@ pub trait ScoringPlugin: Send + Sync {
     fn initialize(&mut self, config: serde_json::Value) -> Result<()>;
 
     /// Adjust score based on context and current detections
-    fn adjust_score(&self, context: &RequestContext, detections: &[Detection], current_score: &AnomalyScore) -> PluginOutput;
+    fn adjust_score(
+        &self,
+        context: &RequestContext,
+        detections: &[Detection],
+        current_score: &AnomalyScore,
+    ) -> PluginOutput;
 
     /// Called when plugin is being unloaded (optional)
     fn shutdown(&mut self) -> Result<()> {
@@ -254,7 +259,10 @@ impl<'de> Deserialize<'de> for PluginPhase {
             "detection" => Ok(PluginPhase::Detection),
             "post-detection" => Ok(PluginPhase::PostDetection),
             "scoring" => Ok(PluginPhase::Scoring),
-            _ => Err(serde::de::Error::custom(format!("unknown plugin phase: {}", s))),
+            _ => Err(serde::de::Error::custom(format!(
+                "unknown plugin phase: {}",
+                s
+            ))),
         }
     }
 }

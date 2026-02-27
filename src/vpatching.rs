@@ -1,6 +1,7 @@
 //! Virtual Patching Module
 //!
 //! Provides instant protection for known vulnerabilities (CVEs) without
+#![allow(clippy::new_ret_no_self)]
 //! requiring application updates. Virtual patches detect and block
 //! exploitation attempts based on vulnerability signatures.
 //!
@@ -16,7 +17,7 @@ use std::time::{Duration, Instant};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::detection::Detection;
 use crate::rules::AttackType;
@@ -439,10 +440,7 @@ impl VirtualPatchManager {
                 .build(),
         );
 
-        info!(
-            "Loaded {} built-in virtual patches",
-            self.patches.len()
-        );
+        info!("Loaded {} built-in virtual patches", self.patches.len());
     }
 
     /// Add a virtual patch
@@ -452,10 +450,7 @@ impl VirtualPatchManager {
 
         self.patches.insert(id.clone(), patch);
 
-        self.patches_by_cve
-            .entry(cve)
-            .or_insert_with(Vec::new)
-            .push(id);
+        self.patches_by_cve.entry(cve).or_default().push(id);
     }
 
     /// Remove a patch by ID
@@ -577,9 +572,7 @@ impl VirtualPatchManager {
         }
 
         match self.last_update {
-            Some(last) => {
-                last.elapsed() > Duration::from_secs(self.config.update_interval_secs)
-            }
+            Some(last) => last.elapsed() > Duration::from_secs(self.config.update_interval_secs),
             None => true,
         }
     }
@@ -639,7 +632,9 @@ mod tests {
                 "Should detect Log4Shell in: {}",
                 payload
             );
-            assert!(detections.iter().any(|d| d.rule_name.contains("CVE-2021-44228")));
+            assert!(detections
+                .iter()
+                .any(|d| d.rule_name.contains("CVE-2021-44228")));
         }
     }
 
@@ -651,7 +646,9 @@ mod tests {
         let detections = manager.check(payload, "body");
 
         assert!(!detections.is_empty());
-        assert!(detections.iter().any(|d| d.rule_name.contains("CVE-2022-22965")));
+        assert!(detections
+            .iter()
+            .any(|d| d.rule_name.contains("CVE-2022-22965")));
     }
 
     #[test]
@@ -662,7 +659,9 @@ mod tests {
         let detections = manager.check(payload, "header");
 
         assert!(!detections.is_empty());
-        assert!(detections.iter().any(|d| d.rule_name.contains("CVE-2014-6271")));
+        assert!(detections
+            .iter()
+            .any(|d| d.rule_name.contains("CVE-2014-6271")));
     }
 
     #[test]
@@ -679,7 +678,9 @@ mod tests {
             let detections = manager.check(input, "body");
             // These might trigger other rules, but not vpatching
             assert!(
-                !detections.iter().any(|d| d.tags.contains(&"vpatching".to_string())),
+                !detections
+                    .iter()
+                    .any(|d| d.tags.contains(&"vpatching".to_string())),
                 "Should not trigger vpatching for: {}",
                 input
             );

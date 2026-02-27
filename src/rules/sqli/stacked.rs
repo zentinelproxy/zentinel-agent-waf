@@ -17,7 +17,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-comment"])
             .build()?,
-
         RuleBuilder::new(942181, "SQL Injection: Inline comment")
             .description("Detects inline comment injection between keywords")
             .attack_type(AttackType::SqlInjection)
@@ -29,7 +28,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-comment"])
             .build()?,
-
         RuleBuilder::new(942182, "SQL Injection: MySQL version comment")
             .description("Detects MySQL version-specific comment injection")
             .attack_type(AttackType::SqlInjection)
@@ -41,7 +39,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-comment", "mysql"])
             .build()?,
-
         // Stacked queries
         RuleBuilder::new(942185, "SQL Injection: Semicolon stacking")
             .description("Detects semicolon-separated stacked queries")
@@ -54,19 +51,19 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-stacked"])
             .build()?,
-
         RuleBuilder::new(942186, "SQL Injection: Multiple statements")
             .description("Detects multiple SQL statements")
             .attack_type(AttackType::SqlInjection)
             .severity(Severity::Medium)
             .confidence(Confidence::Low)
             .paranoia(3)
-            .pattern(r"(?i)(SELECT|INSERT|UPDATE|DELETE).{5,100};.{0,20}(SELECT|INSERT|UPDATE|DELETE)")
+            .pattern(
+                r"(?i)(SELECT|INSERT|UPDATE|DELETE).{5,100};.{0,20}(SELECT|INSERT|UPDATE|DELETE)",
+            )
             .base_score(5)
             .cwe(89)
             .tags(&["sqli", "sqli-stacked"])
             .build()?,
-
         // Quote manipulation
         RuleBuilder::new(942190, "SQL Injection: String escape")
             .description("Detects quote escape sequences")
@@ -79,7 +76,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-escape"])
             .build()?,
-
         RuleBuilder::new(942191, "SQL Injection: Quote balance attack")
             .description("Detects unbalanced quote injection")
             .attack_type(AttackType::SqlInjection)
@@ -91,7 +87,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-escape"])
             .build()?,
-
         // Hex encoding
         RuleBuilder::new(942195, "SQL Injection: Hex encoded string")
             .description("Detects hex-encoded SQL strings")
@@ -104,7 +99,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-encoded"])
             .build()?,
-
         RuleBuilder::new(942196, "SQL Injection: CHAR function")
             .description("Detects CHAR() function for string construction")
             .attack_type(AttackType::SqlInjection)
@@ -116,7 +110,6 @@ pub fn rules() -> Result<Vec<Rule>> {
             .cwe(89)
             .tags(&["sqli", "sqli-encoded"])
             .build()?,
-
         RuleBuilder::new(942197, "SQL Injection: CHR function (Oracle)")
             .description("Detects Oracle CHR() function for string construction")
             .attack_type(AttackType::SqlInjection)

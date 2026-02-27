@@ -115,7 +115,7 @@ impl DomainReputation {
 }
 
 /// Reputation score calculation
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ReputationScore {
     /// Overall score (0-100)
     pub overall: u8,
@@ -162,17 +162,6 @@ impl ReputationScore {
     /// Is this overall a medium-risk score?
     pub fn is_medium_risk(&self) -> bool {
         self.overall >= 40 && self.overall < 70
-    }
-}
-
-impl Default for ReputationScore {
-    fn default() -> Self {
-        Self {
-            overall: 0,
-            ip_score: 0,
-            domain_score: 0,
-            behavioral_score: 0,
-        }
     }
 }
 

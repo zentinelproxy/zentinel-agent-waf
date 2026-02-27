@@ -16,7 +16,7 @@
 pub mod signatures;
 pub mod timing;
 
-pub use signatures::{BotSignatureDb, BotSignature};
+pub use signatures::{BotSignature, BotSignatureDb};
 pub use timing::{TimingAnalyzer, TimingConfig};
 
 use std::collections::HashMap;
@@ -59,7 +59,10 @@ pub enum BotClassification {
     /// Known good bot (search engines, etc.)
     GoodBot { name: String },
     /// Suspected bad bot
-    BadBot { confidence: u8, reasons: Vec<String> },
+    BadBot {
+        confidence: u8,
+        reasons: Vec<String>,
+    },
     /// Unable to determine
     Unknown,
 }
@@ -234,7 +237,10 @@ impl BotDetector {
 
         // Determine classification
         let classification = if confidence >= 70 {
-            BotClassification::BadBot { confidence, reasons }
+            BotClassification::BadBot {
+                confidence,
+                reasons,
+            }
         } else if confidence >= 30 {
             BotClassification::Unknown
         } else {
@@ -265,15 +271,17 @@ impl BotDetector {
         // Check for browser UA but missing browser-specific headers
         if let Some(ua) = user_agent {
             let ua_lower = ua.to_lowercase();
-            let is_browser = ua_lower.contains("mozilla") ||
-                            ua_lower.contains("chrome") ||
-                            ua_lower.contains("safari") ||
-                            ua_lower.contains("firefox") ||
-                            ua_lower.contains("edge");
+            let is_browser = ua_lower.contains("mozilla")
+                || ua_lower.contains("chrome")
+                || ua_lower.contains("safari")
+                || ua_lower.contains("firefox")
+                || ua_lower.contains("edge");
 
             if is_browser {
                 // Browsers send these headers
-                if !headers.contains_key("Accept-Encoding") && !headers.contains_key("accept-encoding") {
+                if !headers.contains_key("Accept-Encoding")
+                    && !headers.contains_key("accept-encoding")
+                {
                     anomalies.push(("Browser UA without Accept-Encoding".to_string(), 20));
                 }
 
@@ -313,7 +321,10 @@ mod tests {
         let headers = HashMap::new();
 
         let (classification, detections) = detector.analyze(None, &headers, None, None);
-        assert!(matches!(classification, BotClassification::BadBot { .. } | BotClassification::Unknown));
+        assert!(matches!(
+            classification,
+            BotClassification::BadBot { .. } | BotClassification::Unknown
+        ));
         assert!(!detections.is_empty());
     }
 
@@ -339,7 +350,9 @@ mod tests {
         let (classification, _) = detector.analyze(Some(ua), &headers, None, None);
 
         // Should be human or unknown, not bad bot
-        assert!(!matches!(classification, BotClassification::BadBot { confidence, .. } if confidence >= 70));
+        assert!(
+            !matches!(classification, BotClassification::BadBot { confidence, .. } if confidence >= 70)
+        );
     }
 
     #[test]

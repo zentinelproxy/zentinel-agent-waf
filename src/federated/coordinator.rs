@@ -1,10 +1,11 @@
 //! Federated Learning Coordinator
 //!
 //! Handles communication with the central coordination server.
+#![allow(dead_code)]
 
 use super::{FederatedError, GlobalModel, GradientUpdate};
 use std::time::Duration;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Coordinator configuration
 #[derive(Debug, Clone)]
@@ -80,29 +81,33 @@ impl FederatedCoordinator {
             let response = client
                 .post(&format!("{}/gradients", self.url))
                 .header("X-Node-ID", &self.node_id)
-                .header("Authorization", self.config.api_key.as_deref().unwrap_or(""))
+                .header(
+                    "Authorization",
+                    self.config.api_key.as_deref().unwrap_or(""),
+                )
                 .json(&update)
                 .send()
                 .await
                 .map_err(|e| FederatedError::NetworkError(e.to_string()))?;
 
             if !response.status().is_success() {
-                return Err(FederatedError::CoordinatorError(
-                    format!("Server returned {}", response.status())
-                ));
+                return Err(FederatedError::CoordinatorError(format!(
+                    "Server returned {}",
+                    response.status()
+                )));
             }
         }
 
-        info!(
-            node_id = self.node_id,
-            "Successfully submitted gradients"
-        );
+        info!(node_id = self.node_id, "Successfully submitted gradients");
 
         Ok(())
     }
 
     /// Fetch latest global model
-    pub async fn fetch_model(&self, current_version: u64) -> Result<Option<GlobalModel>, FederatedError> {
+    pub async fn fetch_model(
+        &self,
+        current_version: u64,
+    ) -> Result<Option<GlobalModel>, FederatedError> {
         debug!(
             current_version = current_version,
             "Fetching global model from coordinator"
@@ -121,7 +126,10 @@ impl FederatedCoordinator {
                 .get(&format!("{}/model", self.url))
                 .header("X-Node-ID", &self.node_id)
                 .header("X-Current-Version", current_version.to_string())
-                .header("Authorization", self.config.api_key.as_deref().unwrap_or(""))
+                .header(
+                    "Authorization",
+                    self.config.api_key.as_deref().unwrap_or(""),
+                )
                 .send()
                 .await
                 .map_err(|e| FederatedError::NetworkError(e.to_string()))?;
@@ -131,12 +139,15 @@ impl FederatedCoordinator {
             }
 
             if !response.status().is_success() {
-                return Err(FederatedError::CoordinatorError(
-                    format!("Server returned {}", response.status())
-                ));
+                return Err(FederatedError::CoordinatorError(format!(
+                    "Server returned {}",
+                    response.status()
+                )));
             }
 
-            let model = response.json::<GlobalModel>().await
+            let model = response
+                .json::<GlobalModel>()
+                .await
                 .map_err(|e| FederatedError::CoordinatorError(e.to_string()))?;
 
             return Ok(Some(model));
@@ -194,10 +205,8 @@ mod tests {
 
     #[test]
     fn test_coordinator_creation() {
-        let coord = FederatedCoordinator::new(
-            "https://example.com".to_string(),
-            "node-123".to_string(),
-        );
+        let coord =
+            FederatedCoordinator::new("https://example.com".to_string(), "node-123".to_string());
 
         assert_eq!(coord.node_id, "node-123");
         assert_eq!(coord.url, "https://example.com");
@@ -218,10 +227,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_register() {
-        let coord = FederatedCoordinator::new(
-            "https://example.com".to_string(),
-            "test-node".to_string(),
-        );
+        let coord =
+            FederatedCoordinator::new("https://example.com".to_string(), "test-node".to_string());
 
         // Should not error in offline mode
         assert!(coord.register().await.is_ok());
@@ -229,10 +236,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_model_offline() {
-        let coord = FederatedCoordinator::new(
-            "https://example.com".to_string(),
-            "test-node".to_string(),
-        );
+        let coord =
+            FederatedCoordinator::new("https://example.com".to_string(), "test-node".to_string());
 
         let result = coord.fetch_model(0).await;
         assert!(result.is_ok());

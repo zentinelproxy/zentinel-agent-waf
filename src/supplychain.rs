@@ -16,9 +16,8 @@
 use std::collections::{HashMap, HashSet};
 
 use regex::Regex;
-use sha2::{Sha256, Sha384, Sha512, Digest};
+use sha2::{Digest, Sha256, Sha384, Sha512};
 use std::sync::LazyLock;
-use tracing::{debug, warn};
 
 use crate::detection::Detection;
 use crate::rules::AttackType;
@@ -314,10 +313,7 @@ impl SupplyChainProtector {
         }
 
         // Check for inline script in HTML
-        if content_type
-            .map(|ct| ct.contains("html"))
-            .unwrap_or(false)
-        {
+        if content_type.map(|ct| ct.contains("html")).unwrap_or(false) {
             detections.extend(self.check_inline_scripts(content));
         }
 

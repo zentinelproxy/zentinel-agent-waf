@@ -17,7 +17,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "cloud", "aws"])
             .build()?,
-
         RuleBuilder::new(936101, "SSRF: AWS IMDSv1 path")
             .description("Detects AWS IMDSv1 API paths")
             .attack_type(AttackType::Ssrf)
@@ -29,7 +28,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "cloud", "aws"])
             .build()?,
-
         RuleBuilder::new(936102, "SSRF: GCP metadata")
             .description("Detects GCP metadata endpoint")
             .attack_type(AttackType::Ssrf)
@@ -41,7 +39,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "cloud", "gcp"])
             .build()?,
-
         RuleBuilder::new(936103, "SSRF: DigitalOcean metadata")
             .description("Detects DigitalOcean metadata endpoint")
             .attack_type(AttackType::Ssrf)
@@ -53,7 +50,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "cloud", "digitalocean"])
             .build()?,
-
         // Internal IP ranges
         RuleBuilder::new(936110, "SSRF: Private IP 10.x.x.x")
             .description("Detects access to 10.0.0.0/8 network")
@@ -66,7 +62,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "internal-ip"])
             .build()?,
-
         RuleBuilder::new(936111, "SSRF: Private IP 172.16-31.x.x")
             .description("Detects access to 172.16.0.0/12 network")
             .attack_type(AttackType::Ssrf)
@@ -78,7 +73,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "internal-ip"])
             .build()?,
-
         RuleBuilder::new(936112, "SSRF: Private IP 192.168.x.x")
             .description("Detects access to 192.168.0.0/16 network")
             .attack_type(AttackType::Ssrf)
@@ -90,7 +84,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "internal-ip"])
             .build()?,
-
         RuleBuilder::new(936113, "SSRF: Localhost access")
             .description("Detects localhost/loopback access")
             .attack_type(AttackType::Ssrf)
@@ -102,7 +95,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "localhost"])
             .build()?,
-
         RuleBuilder::new(936114, "SSRF: IPv6 loopback")
             .description("Detects IPv6 loopback access")
             .attack_type(AttackType::Ssrf)
@@ -114,7 +106,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "localhost", "ipv6"])
             .build()?,
-
         // Protocol handlers
         RuleBuilder::new(936120, "SSRF: file:// protocol")
             .description("Detects file:// protocol for local file read")
@@ -127,7 +118,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "file-protocol"])
             .build()?,
-
         RuleBuilder::new(936121, "SSRF: gopher:// protocol")
             .description("Detects gopher:// protocol for SSRF exploitation")
             .attack_type(AttackType::Ssrf)
@@ -139,7 +129,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "gopher"])
             .build()?,
-
         RuleBuilder::new(936122, "SSRF: dict:// protocol")
             .description("Detects dict:// protocol")
             .attack_type(AttackType::Ssrf)
@@ -151,7 +140,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "dict"])
             .build()?,
-
         // URL encoding bypass
         RuleBuilder::new(936130, "SSRF: Octal IP encoding")
             .description("Detects octal-encoded IP addresses")
@@ -164,7 +152,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "encoding"])
             .build()?,
-
         RuleBuilder::new(936131, "SSRF: Decimal IP encoding")
             .description("Detects decimal-encoded IP addresses (e.g., 2130706433)")
             .attack_type(AttackType::Ssrf)
@@ -176,7 +163,6 @@ pub fn rules(paranoia_level: u8) -> Result<Vec<Rule>> {
             .cwe(918)
             .tags(&["ssrf", "encoding"])
             .build()?,
-
         RuleBuilder::new(936132, "SSRF: Hex IP encoding")
             .description("Detects hex-encoded IP addresses")
             .attack_type(AttackType::Ssrf)

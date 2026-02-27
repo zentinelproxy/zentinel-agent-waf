@@ -213,15 +213,11 @@ impl AutomataEngine {
 
         // Build RegexSet for efficient multi-pattern matching
         // RegexSet reports ALL patterns that match, unlike MetaRegex which uses leftmost-first
-        let regex_set = RegexSet::new(&pattern_strs)
-            .context("Failed to compile RegexSet")?;
+        let regex_set = RegexSet::new(&pattern_strs).context("Failed to compile RegexSet")?;
 
         // Also compile individual regexes for extracting match positions
         // RegexSet only tells us WHICH patterns match, not WHERE
-        let regexes: Result<Vec<Regex>, _> = pattern_strs
-            .iter()
-            .map(|p| Regex::new(p))
-            .collect();
+        let regexes: Result<Vec<Regex>, _> = pattern_strs.iter().map(|p| Regex::new(p)).collect();
         let regexes = regexes.context("Failed to compile individual regexes")?;
 
         Ok(CompiledAutomaton {
@@ -285,7 +281,8 @@ impl AutomataEngine {
         seen_rules: &mut std::collections::HashSet<u32>,
     ) {
         // Use RegexSet to find ALL patterns that match (including overlapping)
-        let matching_patterns: Vec<usize> = automaton.regex_set.matches(input).into_iter().collect();
+        let matching_patterns: Vec<usize> =
+            automaton.regex_set.matches(input).into_iter().collect();
 
         // For each matching pattern, get the match position using the individual regex
         for pattern_idx in matching_patterns {
@@ -452,7 +449,7 @@ mod tests {
                 .severity(Severity::High)
                 .confidence(Confidence::High)
                 .paranoia(1)
-                .pattern(r"(?i)'\s*or\s*'[^']*'\s*=\s*'")  // XPath pattern
+                .pattern(r"(?i)'\s*or\s*'[^']*'\s*=\s*'") // XPath pattern
                 .base_score(8)
                 .targets(vec![Target::All])
                 .build()
@@ -483,9 +480,18 @@ mod tests {
         eprintln!("input='{}' body matches: {:?}", input1, matches_body);
         eprintln!("input='{}' path matches: {:?}", input1, matches_path);
 
-        assert!(matches_query.iter().any(|m| m.rule_id == 999001), "Target::All rule should match in query");
-        assert!(matches_body.iter().any(|m| m.rule_id == 999001), "Target::All rule should match in body");
-        assert!(matches_path.iter().any(|m| m.rule_id == 999001), "Target::All rule should match in path");
+        assert!(
+            matches_query.iter().any(|m| m.rule_id == 999001),
+            "Target::All rule should match in query"
+        );
+        assert!(
+            matches_body.iter().any(|m| m.rule_id == 999001),
+            "Target::All rule should match in body"
+        );
+        assert!(
+            matches_path.iter().any(|m| m.rule_id == 999001),
+            "Target::All rule should match in path"
+        );
 
         // Test rule 999002 with no targets (empty vec)
         let input2 = "/files/../../../etc/passwd";
@@ -493,7 +499,10 @@ mod tests {
 
         eprintln!("input='{}' path matches: {:?}", input2, matches_path2);
 
-        assert!(matches_path2.iter().any(|m| m.rule_id == 999002), "Empty targets rule should match in path");
+        assert!(
+            matches_path2.iter().any(|m| m.rule_id == 999002),
+            "Empty targets rule should match in path"
+        );
     }
 
     #[test]
@@ -511,7 +520,10 @@ mod tests {
         // Now test RegexSet
         let regex_set = RegexSet::new([pattern]).unwrap();
         let matches: Vec<_> = regex_set.matches(input).into_iter().collect();
-        eprintln!("Direct pattern test: input='{}', matches={:?}", input, matches);
+        eprintln!(
+            "Direct pattern test: input='{}', matches={:?}",
+            input, matches
+        );
         assert!(!matches.is_empty(), "RegexSet should match");
     }
 
@@ -521,8 +533,8 @@ mod tests {
         use regex::RegexSet;
 
         let patterns = [
-            r"(?i)'\s*or\s*'[^']*'\s*=\s*'",  // XPath pattern
-            r"(?i)'\s*OR\s*",                  // SQL injection pattern
+            r"(?i)'\s*or\s*'[^']*'\s*=\s*'", // XPath pattern
+            r"(?i)'\s*OR\s*",                // SQL injection pattern
         ];
         let input = "id=' OR '1'='1";
 
