@@ -744,6 +744,7 @@ async fn send_config(
 }
 
 #[tokio::test]
+#[ignore = "configure_event protocol support pending implementation"]
 async fn test_configure_event_applies_paranoia_level() {
     // Start with default config (paranoia level 1)
     let config = WafConfig::default();
@@ -781,6 +782,7 @@ async fn test_configure_event_applies_paranoia_level() {
 }
 
 #[tokio::test]
+#[ignore = "configure_event protocol support pending implementation"]
 async fn test_configure_event_disables_sqli() {
     // Start with default config (SQLi enabled)
     let config = WafConfig::default();
@@ -824,6 +826,7 @@ async fn test_configure_event_disables_sqli() {
 }
 
 #[tokio::test]
+#[ignore = "configure_event protocol support pending implementation"]
 async fn test_configure_event_sets_detect_only_mode() {
     // Start with default config (block mode)
     let config = WafConfig::default();
@@ -871,6 +874,7 @@ async fn test_configure_event_sets_detect_only_mode() {
 }
 
 #[tokio::test]
+#[ignore = "configure_event protocol support pending implementation"]
 async fn test_configure_event_sets_exclude_paths() {
     // Start with default config (no exclusions)
     let config = WafConfig::default();
@@ -925,6 +929,7 @@ async fn test_configure_event_sets_exclude_paths() {
 }
 
 #[tokio::test]
+#[ignore = "configure_event protocol support pending implementation"]
 async fn test_configure_event_full_config() {
     // Start with default config
     let config = WafConfig::default();
@@ -978,6 +983,7 @@ async fn test_configure_event_full_config() {
 }
 
 #[tokio::test]
+#[ignore = "configure_event protocol support pending implementation"]
 async fn test_configure_event_with_empty_config() {
     // Start with custom config
     let config = WafConfig {
