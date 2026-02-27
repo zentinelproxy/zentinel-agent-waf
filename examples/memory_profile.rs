@@ -8,10 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use zentinel_agent_waf::{WafConfig, WafEngine};
 
 fn separator(char: char, width: usize) {
-    println!(
-        "{}",
-        std::iter::repeat_n(char, width).collect::<String>()
-    );
+    println!("{}", std::iter::repeat_n(char, width).collect::<String>());
 }
 
 // Custom allocator to track memory usage
