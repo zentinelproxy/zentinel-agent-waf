@@ -274,7 +274,7 @@ pub fn aggregate_gradients(updates: &[GradientUpdate], method: AggregationMethod
                     .filter_map(|u| u.gradients.get(i).copied())
                     .collect();
                 values.sort_by(|a, b| a.partial_cmp(b).unwrap());
-                result[i] = if values.len() % 2 == 0 {
+                result[i] = if values.len().is_multiple_of(2) {
                     (values[values.len() / 2 - 1] + values[values.len() / 2]) / 2.0
                 } else {
                     values[values.len() / 2]

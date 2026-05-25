@@ -93,7 +93,7 @@ impl CharNGramTokenizer {
     pub fn extract_sorted(&self, input: &str) -> Vec<(u64, u32)> {
         let features = self.extract(input);
         let mut vec: Vec<_> = features.features.into_iter().collect();
-        vec.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by frequency descending
+        vec.sort_by_key(|b| std::cmp::Reverse(b.1)); // Sort by frequency descending
         vec
     }
 }
