@@ -1,137 +1,174 @@
 name: Release
 
-# DISABLED: Uncomment the 'on' block below to enable releases
-# on:
-#   push:
-#     tags:
-#       - 'v*'
+# A release is one tag push:
+#
+#   git tag -a v0.4.0 -m "v0.4.0" && git push origin v0.4.0
+#
+# The tag must equal `version` in Cargo.toml; the workflow refuses otherwise.
+# Every platform is built from the tagged commit with the committed Cargo.lock,
+# then run behind a real Zentinel (scripts/smoke-test.sh). Nothing is published
+# unless every platform passes. The asset names are the ones `zentinel bundle
+# install` downloads:
+#
+#   <binary>-<version>-<os>-<arch>.tar.gz  (+ .sha256)
+#
+# Running the workflow by hand (workflow_dispatch) builds and smoke-tests
+# without publishing anything.
 
 on:
-  workflow_dispatch:  # Manual trigger only for now
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/zentinel-waf
+  BINARY_NAME: zentinel-waf-agent
+  # The Zentinel release the smoke test runs the agent behind.
+  ZENTINEL_RELEASE: "26.10_7"
 
 jobs:
-  publish:
+  version:
+    name: Check tag against Cargo.toml
     runs-on: ubuntu-latest
-    if: false  # Disabled - set to true to enable crates.io publishing
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Publish to crates.io
-        run: cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        continue-on-error: true
+      - uses: actions/checkout@v6
+      - id: v
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          echo "Cargo.toml version: $version"
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${version}. Bump Cargo.toml in a commit first and tag that commit."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   build:
-    runs-on: ubuntu-latest
-    if: false  # Disabled - set to true to enable builds
-
+    name: Build and smoke-test ${{ matrix.artifact }}
+    needs: version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+            artifact: linux-x86_64
+            zentinel: linux-amd64
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            artifact: linux-aarch64
+            zentinel: linux-arm64
+          - target: aarch64-apple-darwin
+            os: macos-14
+            artifact: darwin-aarch64
+            zentinel: darwin-arm64
+          # darwin-x86_64 is not built: macOS Intel runners are scarce and the
+          # bundle does not advertise that platform.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-
-      - name: Build release binary
-        run: |
-          cargo build --release
-          strip target/release/zentinel-waf-agent
-
-      - name: Prepare artifacts
-        run: |
-          mkdir -p artifacts
-          cp target/release/zentinel-waf-agent artifacts/
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          name: zentinel-waf-linux-amd64
-          path: artifacts/
+          targets: ${{ matrix.target }}
+
+      - name: Install protoc (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Install protoc (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Strip
+        run: strip target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
+
+      - name: Check the binary reports the release version
+        run: |
+          set -euo pipefail
+          out=$(target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} --version)
+          echo "$out"
+          [ "$out" = "${{ env.BINARY_NAME }} ${{ needs.version.outputs.version }}" ]
+
+      - name: Download Zentinel ${{ env.ZENTINEL_RELEASE }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset="zentinel-${ZENTINEL_RELEASE}-${{ matrix.zentinel }}.tar.gz"
+          mkdir -p "$RUNNER_TEMP/zentinel"
+          cd "$RUNNER_TEMP/zentinel"
+          gh release download "$ZENTINEL_RELEASE" --repo zentinelproxy/zentinel \
+            --pattern "$asset" --pattern "$asset.sha256"
+          shasum -a 256 -c "$asset.sha256"
+          tar xzf "$asset"
+          ./zentinel --version
+
+      - name: Smoke test behind Zentinel
+        run: |
+          scripts/smoke-test.sh \
+            target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} \
+            "$RUNNER_TEMP/zentinel/zentinel"
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          name="${BINARY_NAME}-${{ needs.version.outputs.version }}-${{ matrix.artifact }}.tar.gz"
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${BINARY_NAME} dist/
+          cd dist
+          tar -czf "$name" "$BINARY_NAME"
+          shasum -a 256 "$name" > "$name.sha256"
+          rm "$BINARY_NAME"
+          cat "$name.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
           retention-days: 7
-
-  docker:
-    needs: build
-    runs-on: ubuntu-latest
-    if: false  # Disabled - set to true to enable Docker builds
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download AMD64 artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: zentinel-waf-linux-amd64
-          path: artifacts/linux-amd64
-
-      - name: Prepare artifact
-        run: chmod +x artifacts/linux-amd64/zentinel-waf-agent
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract version
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Build and push image
-        uses: docker/build-push-action@v5
-        with:
-          context: artifacts/linux-amd64
-          file: ./Dockerfile
-          target: prebuilt
-          platforms: linux/amd64
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          provenance: false
+          if-no-files-found: error
 
   release:
-    needs: [build, docker]
+    name: Publish GitHub release
+    needs: [version, build]
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    if: false  # Disabled - set to true to enable releases
     permissions:
       contents: write
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download AMD64 artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: zentinel-waf-linux-amd64
-          path: artifacts/linux-amd64
+          path: artifacts
+          merge-multiple: true
 
-      - name: Prepare release files
+      - name: Check every bundle asset is present
         run: |
-          mkdir -p release
-          mv artifacts/linux-amd64/zentinel-waf-agent release/zentinel-waf-agent-linux-amd64
+          set -euo pipefail
+          v="${{ needs.version.outputs.version }}"
+          for p in linux-x86_64 linux-aarch64 darwin-aarch64; do
+            test -f "artifacts/${BINARY_NAME}-${v}-${p}.tar.gz"
+            test -f "artifacts/${BINARY_NAME}-${v}-${p}.tar.gz.sha256"
+          done
+          ls -l artifacts
 
+      # Fails if a release for this tag already exists: a published release is
+      # never replaced in place.
       - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: release/*
-          generate_release_notes: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" artifacts/* \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
