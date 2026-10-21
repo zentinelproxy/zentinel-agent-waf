@@ -1,436 +1,249 @@
-# Zentinel WAF Agent
+<p align="center">
+  <a href="https://zentinelproxy.io">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/zentinelproxy/design/main/marks/lockup/zentinel-lockup-dark.svg">
+      <img alt="Zentinel" src="https://raw.githubusercontent.com/zentinelproxy/design/main/marks/lockup/zentinel-lockup-light.svg" height="52">
+    </picture>
+  </a>
+</p>
 
-A next-generation Web Application Firewall agent for [Zentinel](https://github.com/zentinelproxy/zentinel) reverse proxy. Built in **pure Rust** with no C dependencies, featuring heuristic anomaly detection with n-gram analysis, anomaly scoring, and 285 detection rules.
+<h3 align="center">WAF agent</h3>
 
-## Features
+<p align="center">Scores request paths, query strings, headers and bodies against Zentinel's own pure-Rust attack rules and blocks above an anomaly threshold.</p>
 
-### Core Detection (285 Rules)
-- **SQL Injection** - UNION, blind, time-based, stacked queries, NoSQL
-- **Cross-Site Scripting (XSS)** - Reflected, stored, DOM-based, polyglot
-- **Path Traversal** - Directory traversal, LFI, RFI
-- **Command Injection** - Shell, Windows cmd, expression languages
-- **Server-Side Template Injection (SSTI)** - Jinja2, Twig, Freemarker
-- **LDAP/XPath Injection**
-- **SSRF Detection** - Internal IP ranges, cloud metadata endpoints
-- **Insecure Deserialization**
+<p align="center">
+  <a href="https://github.com/zentinelproxy/zentinel-agent-waf/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/zentinelproxy/zentinel-agent-waf/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-9b4d8a?style=flat&labelColor=1f161e">
+  <img alt="Rust: 1.94.1+" src="https://img.shields.io/badge/rust-1.94.1%2B-f68d31?style=flat&labelColor=1f161e&logo=rust&logoColor=white">
+  <img alt="Agent protocol: v2" src="https://img.shields.io/badge/agent%20protocol-v2-f68d31?style=flat&labelColor=1f161e">
+</p>
 
-### Advanced Protection
-- **API Security** - GraphQL introspection blocking, JSON depth limits, JWT validation
-- **Bot Detection** - Scanner fingerprints, behavioral analysis, timing anomalies
-- **Credential Stuffing Protection** - Breach checking, velocity detection
-- **Sensitive Data Detection** - Credit cards, SSN, API keys, PII masking
-- **Supply Chain Protection** - SRI validation, crypto miner detection, Magecart patterns
+<p align="center">
+  <a href="https://registry.zentinelproxy.io/waf/">Registry</a> &middot;
+  <a href="https://docs.zentinelproxy.io">Docs</a> &middot;
+  <a href="https://github.com/zentinelproxy">All repositories</a>
+</p>
 
-### Enterprise Features
-- **Threat Intelligence** - IP/domain reputation framework, Tor exit node detection (requires feed configuration)
-- **Virtual Patching** - Built-in CVE signatures (Log4Shell, Spring4Shell, Shellshock)
-- **Advanced Analytics** - Prometheus/OpenTelemetry metrics, latency histograms
-- **Federated Learning** - Privacy-preserving distributed gradient averaging (experimental)
+A web application firewall with its own rule set, written in Rust with no C
+dependencies. It does not read SecLang: rules are compiled into the agent and
+selected by category and paranoia level. Each match adds to an anomaly score;
+the request is blocked when the score reaches the threshold. For the OWASP CRS
+use [zentinel-agent-zentinelsec](https://github.com/zentinelproxy/zentinel-agent-zentinelsec)
+(pure Rust) or [zentinel-agent-modsec](https://github.com/zentinelproxy/zentinel-agent-modsec)
+(C libmodsecurity) instead.
 
-### Performance
-- **Anomaly Scoring** - Cumulative risk scores instead of binary block/allow
-- **Statistical Classification** - Character n-gram based payload fingerprinting
-- **Regex Automata** - DFA-based multi-pattern matching for O(n) scanning
-- **Streaming Inspection** - Constant memory body inspection with sliding window
-- **Plugin Traits** - Compile-time extensible detection and scoring
+> **Known limitation:** the released binary (0.3.0, which
+> `zentinel bundle install waf` also installs) does not speak the current agent
+> protocol: the proxy's handshake fails with `Invalid message format` and every
+> request gets a 503. Build from source until a new release ships.
 
-## Installation
-
-### Using Bundle (Recommended)
-
-```bash
-# Install just this agent
-zentinel bundle install waf
-
-# Or install all bundled agents
-zentinel bundle install
-```
-
-The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://docs.zentinelproxy.io/deployment/bundle/) for details.
-
-### Using Cargo
-
-Not supported. `zentinel-agent-waf` is not published on crates.io, and it depends on
-`zentinel-agent-protocol` through a path dependency, so neither
-`cargo install zentinel-agent-waf` nor `cargo install --git` works. Use a prebuilt
-binary or build from source (below).
-
-### Prebuilt Binaries
-
-Each [release](https://github.com/zentinelproxy/zentinel-agent-waf/releases) ships binaries
-for `linux-x86_64`, `linux-aarch64`, and `darwin-aarch64`:
+## Quick start
 
 ```bash
-VERSION=0.3.0
-PLATFORM=linux-x86_64   # or linux-aarch64, darwin-aarch64
-curl -fsSL -o zentinel-waf-agent.tar.gz \
-  "https://github.com/zentinelproxy/zentinel-agent-waf/releases/download/v${VERSION}/zentinel-waf-agent-${VERSION}-${PLATFORM}.tar.gz"
-tar -xzf zentinel-waf-agent.tar.gz
-sudo install -m 0755 zentinel-waf-agent /usr/local/bin/
+# Build from source (see Install), then:
+zentinel-waf-agent --socket /var/run/zentinel/waf.sock
 ```
 
-### From Source
+Then point Zentinel at the socket. Request bodies reach agents only when the
+top-level `waf` block enables body inspection:
 
-Building from source requires the [zentinel](https://github.com/zentinelproxy/zentinel) repository checked out
-**next to** this one, because `zentinel-agent-protocol` is a path dependency:
+```kdl
+system {
+    worker-threads 0
+}
+
+listeners {
+    listener "http" {
+        address "127.0.0.1:8080"
+        protocol "http"
+    }
+}
+
+// Request bodies reach agents only when this block enables them.
+waf {
+    mode "off"
+    body-inspection {
+        inspect-request-body #true
+        max-inspection-bytes 1048576
+    }
+}
+
+agents {
+    agent "waf" type="waf" {
+        unix-socket "/var/run/zentinel/waf.sock"
+        events "request_headers" "request_body"
+        timeout-ms 200
+        failure-mode "closed"
+    }
+}
+
+filters {
+    filter "waf" {
+        type "agent"
+        agent "waf"
+        failure-mode "closed"
+    }
+}
+
+routes {
+    route "default" {
+        matches {
+            path-prefix "/"
+        }
+        upstream "backend"
+        filters "waf"
+    }
+}
+
+upstreams {
+    upstream "backend" {
+        target "127.0.0.1:3000"
+    }
+}
+```
+
+`failure-mode "closed"` on the filter rejects requests while the agent is
+unreachable; use `"open"` to forward them uninspected instead.
+
+```bash
+curl -i 'http://127.0.0.1:8080/?q=%3Cscript%3Ealert(1)%3C/script%3E'   # 403
+curl -i -d "id=1' OR '1'='1" http://127.0.0.1:8080/                     # 403
+```
+
+## Install
+
+### From source (recommended for now)
+
+The crate takes `zentinel-agent-protocol` from a sibling checkout of
+[zentinel](https://github.com/zentinelproxy/zentinel) (a path dependency), so
+clone both side by side. Building needs `protoc`.
 
 ```bash
 git clone https://github.com/zentinelproxy/zentinel
 git clone https://github.com/zentinelproxy/zentinel-agent-waf
 cd zentinel-agent-waf
 cargo build --release
+sudo install -m 0755 target/release/zentinel-waf-agent /usr/local/bin/
 ```
 
-## Quick Start
+The path dependency is also why neither `cargo install zentinel-agent-waf` (it
+is not on crates.io) nor `cargo install --git` works.
+
+### Bundle
 
 ```bash
-# Basic usage with default settings
-zentinel-waf-agent --socket /var/run/zentinel/waf.sock
-
-# With higher sensitivity
-zentinel-waf-agent --socket /var/run/zentinel/waf.sock --paranoia-level 2
-
-# Detect-only mode (no blocking)
-zentinel-waf-agent --socket /var/run/zentinel/waf.sock --block-mode false
+zentinel bundle install waf
 ```
+
+Installs release 0.3.0, which does not work with the current proxy (see Known
+limitation). See the [bundle documentation](https://docs.zentinelproxy.io/deployment/bundle/).
+
+### Release binaries
+
+[Release 0.3.0](https://github.com/zentinelproxy/zentinel-agent-waf/releases/tag/v0.3.0)
+ships `linux-x86_64`, `linux-aarch64` and `darwin-aarch64`, with the same
+limitation.
 
 ## Configuration
 
-### Command Line Options
+The agent is configured with command-line flags or environment variables. A
+`config { }` block on the proxy's `agent` definition does not reach it.
 
-| Option | Environment Variable | Description | Default |
-|--------|---------------------|-------------|---------|
-| `--socket` | `AGENT_SOCKET` | Unix socket path | `/tmp/zentinel-waf.sock` |
-| `--paranoia-level` | `WAF_PARANOIA_LEVEL` | Sensitivity (1-4) | `1` |
-| `--block-mode` | `WAF_BLOCK_MODE` | Block or detect-only | `true` |
-| `--config` | `WAF_CONFIG` | JSON config file path | - |
+| Option | Environment | Default | Meaning |
+|---|---|---|---|
+| `--socket` | `AGENT_SOCKET` | `/tmp/zentinel-waf.sock` | Unix socket to listen on |
+| `--grpc-address` | `AGENT_GRPC_ADDRESS` | unset | Listen on gRPC at this address instead of the socket |
+| `--paranoia-level` | `WAF_PARANOIA_LEVEL` | `1` | 1 to 4; higher levels add lower-confidence rules |
+| `--sqli` | `WAF_SQLI` | `true` | SQL injection rules |
+| `--xss` | `WAF_XSS` | `true` | Cross-site scripting rules |
+| `--path-traversal` | `WAF_PATH_TRAVERSAL` | `true` | Path traversal rules |
+| `--command-injection` | `WAF_COMMAND_INJECTION` | `true` | Command injection rules |
+| `--protocol` | `WAF_PROTOCOL` | `true` | Protocol, request smuggling and scanner rules |
+| `--block-mode` | `WAF_BLOCK_MODE` | `true` | Block at the threshold; `false` is detect-only |
+| `--exclude-paths` | `WAF_EXCLUDE_PATHS` | none | Comma-separated path prefixes that skip inspection |
+| `--body-inspection` | `WAF_BODY_INSPECTION` | `true` | Inspect request bodies |
+| `--max-body-size` | `WAF_MAX_BODY_SIZE` | `1048576` | Largest body inspected, in bytes |
+| `--response-inspection` | `WAF_RESPONSE_INSPECTION` | `false` | Scan response bodies (detect only, never blocks) |
+| `--websocket-inspection` | `WAF_WEBSOCKET_INSPECTION` | `false` | Scan WebSocket frames (add the `websocket_frame` event on the proxy side) |
+| `--websocket-text-frames` | `WAF_WEBSOCKET_TEXT_FRAMES` | `true` | Inspect text frames |
+| `--websocket-binary-frames` | `WAF_WEBSOCKET_BINARY_FRAMES` | `false` | Inspect binary frames |
+| `--websocket-max-frame-size` | `WAF_WEBSOCKET_MAX_FRAME_SIZE` | `65536` | Largest frame inspected, in bytes |
+| `-v`, `--verbose` | `WAF_VERBOSE` | `false` | Debug logging |
 
-### JSON Configuration
+The boolean options are switches: `--block-mode` cannot take a value, so
+`--block-mode false` is rejected. To turn one off, set the environment
+variable, e.g. `WAF_BLOCK_MODE=false`.
 
-```json
-{
-  "paranoia-level": 2,
-  "scoring": {
-    "enabled": true,
-    "block-threshold": 25,
-    "log-threshold": 10
-  },
-  "rules": {
-    "enabled": ["942*", "941*", "932*"],
-    "disabled": ["942100"],
-    "exclusions": [{
-      "rules": ["942110"],
-      "conditions": { "paths": ["/api/admin"] }
-    }]
-  },
-  "api-security": {
-    "graphql-enabled": true,
-    "block-introspection": true,
-    "jwt-block-none": true
-  },
-  "bot-detection": {
-    "enabled": true,
-    "timing-analysis": true
-  },
-  "sensitive-data": {
-    "enabled": true,
-    "mask-in-logs": true
-  },
-  "threat-intel": {
-    "enabled": true,
-    "block-tor-exit-nodes": true
-  },
-  "virtual-patching": {
-    "enabled": true,
-    "log-matches": true
-  },
-  "metrics": {
-    "enabled": true,
-    "per-rule-metrics": true
-  }
-}
-```
+The rule categories SSTI, LDAP injection, XPath injection, SSRF and insecure
+deserialization are always loaded. Proxy-side agent options are in the
+[agents reference](https://docs.zentinelproxy.io/configuration/agents/).
 
-## Paranoia Levels
+## How it works
 
-| Level | Description | Use Case |
-|-------|-------------|----------|
-| 1 | High-confidence detections only | Production (recommended) |
-| 2 | Medium-confidence rules added | Production with tuning |
-| 3 | Low-confidence rules added | Staging/testing |
-| 4 | Maximum sensitivity | Security audits |
+**Rules.** 146 rules at paranoia level 1, rising to 284 at level 4 (counted
+from `rules::load_rules` with default settings). They cover SQL injection, XSS,
+path traversal, command injection, server-side template injection, LDAP and
+XPath injection, SSRF, insecure deserialization, protocol attacks, request
+smuggling and scanner detection. Patterns are grouped into regex automata, so a
+value is matched against a group at once rather than rule by rule.
 
-## Anomaly Scoring
+**Scoring.** Each match contributes its rule's score times a severity
+multiplier and a location weight:
 
-Instead of binary block/allow, the WAF calculates cumulative risk scores:
+| Severity | Multiplier | | Location | Weight |
+|---|---|---|---|---|
+| Critical | 2.0 | | Query string | 1.5 |
+| High | 1.5 | | WebSocket frame | 1.4 |
+| Medium | 1.0 | | Path | 1.2 |
+| Low | 0.7 | | Body | 1.2 |
+| Info | 0.3 | | Header | 1.0 |
 
-```
-Total Score = Σ(rule_score × severity_multiplier × location_weight)
-```
+A total of 25 or more blocks; 10 to 24 is logged and passed.
 
-| Score Range | Action |
-|-------------|--------|
-| 0-9 | Allow |
-| 10-24 | Log (warning) |
-| 25+ | Block |
+| Outcome | What the agent returns |
+|---|---|
+| Score ≥ 25, block mode | `403 Forbidden`, response headers `X-WAF-Blocked: true`, `X-WAF-Rule` (first rule ID), `X-WAF-Score` |
+| Score 10 to 24, or detect-only | Allow, with `X-WAF-Detected` (rule IDs) and `X-WAF-Score` added to the request sent upstream |
+| Response body match | Allow, with `X-WAF-Response-Detected` on the response |
 
-### Severity Multipliers
+The agent also reports request, block and detection counters to the proxy
+through the agent protocol's metrics report; it serves no HTTP endpoint of its
+own.
 
-| Severity | Multiplier |
-|----------|------------|
-| Critical | 2.0x |
-| High | 1.5x |
-| Medium | 1.0x |
-| Low | 0.7x |
-| Info | 0.3x |
-
-### Location Weights
-
-| Location | Weight |
-|----------|--------|
-| Query String | 1.5x |
-| Cookie | 1.3x |
-| Path | 1.2x |
-| Body | 1.2x |
-| Headers | 1.0x |
-
-## Rule Categories
-
-### SQL Injection (942xxx)
-- 942100-942199: Basic patterns
-- 942200-942299: Database functions
-- 942300-942399: SQL keywords
-- 942400-942499: Blind injection
-
-### XSS (941xxx)
-- 941100-941199: Script tags
-- 941200-941299: Event handlers
-- 941300-941399: JavaScript URIs
-- 941400-941499: HTML injection
-
-### Command Injection (932xxx)
-- 932100-932149: Unix commands
-- 932150-932199: Windows commands
-- 932200-932299: Shell expressions
-
-### Path Traversal (930xxx)
-- 930100-930149: Basic traversal
-- 930150-930199: OS file detection
-
-### Protocol Attacks (920xxx)
-- 920100-920199: Request anomalies
-- 920200-920299: Protocol violations
-
-### Scanner Detection (913xxx)
-- 913100-913199: User-Agent patterns
-
-### SSTI (934xxx)
-- 934100-934199: Template injection
-
-### Supply Chain (92xxx)
-- 92000-92099: Script integrity
-- 92100-92199: Malicious patterns
-- 92200-92299: Obfuscation
-
-### Virtual Patches (93xxx)
-- 93700: Log4Shell (CVE-2021-44228)
-- 93701: Spring4Shell (CVE-2022-22965)
-- 93702: Shellshock (CVE-2014-6271)
-
-### Threat Intelligence (94xxx)
-- 94000-94099: IP reputation
-- 94100-94199: Domain reputation
-- 94200-94299: IoC matches
-
-## API Security
-
-### GraphQL Protection
-- Introspection query blocking
-- Query depth limiting
-- Batch query detection
-
-### JWT Validation
-- "none" algorithm detection
-- Weak algorithm warnings
-- Expired token detection
-
-### JSON Security
-- Deep nesting detection
-- Prototype pollution patterns
-- NoSQL injection patterns
-
-## Metrics
-
-### Prometheus Format
-```
-GET /metrics
-
-# HELP waf_requests_total Total requests processed
-# TYPE waf_requests_total counter
-waf_requests_total 12345
-
-# HELP waf_requests_blocked Total requests blocked
-# TYPE waf_requests_blocked counter
-waf_requests_blocked 42
-
-# HELP waf_inspection_latency_seconds Request inspection latency
-# TYPE waf_inspection_latency_seconds histogram
-waf_inspection_latency_seconds_bucket{le="0.001"} 10000
-waf_inspection_latency_seconds_bucket{le="0.005"} 12000
-```
-
-### JSON Format
-```json
-GET /metrics?format=json
-
-{
-  "requests_total": 12345,
-  "requests_blocked": 42,
-  "detections_by_attack_type": {
-    "SQL Injection": 15,
-    "Cross-Site Scripting": 8
-  }
-}
-```
-
-## Zentinel Proxy Integration
-
-```kdl
-agents {
-    agent "waf" {
-        type "custom"
-        transport "unix_socket" {
-            path "/var/run/zentinel/waf.sock"
-        }
-        events "request_headers" "request_body_chunk" "response_body_chunk"
-        timeout-ms 50
-        failure-mode "open"
-    }
-}
-
-routes {
-    route "api" {
-        matches { path-prefix "/api" }
-        upstream "backend"
-        agents "waf"
-    }
-}
-```
-
-## Response Headers
-
-### On Blocked Requests
-```
-X-WAF-Blocked: true
-X-WAF-Rule: 942100
-X-WAF-Score: 35
-X-WAF-Attack-Type: SQL Injection
-```
-
-### On Detected (Non-Blocking)
-```
-X-WAF-Detected: 942100,941100
-X-WAF-Score: 15
-```
-
-## Performance Benchmarks
-
-> Measured with Criterion. Run `cargo bench` to reproduce on your hardware.
-
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Rule matching (1KB input) | <5ms | ~2ms |
-| Memory per request | <1KB | ~500B |
-| Throughput | >50K req/s | 65K req/s |
-| Binary size | <10MB | ~6MB |
-
-Run benchmarks:
-```bash
-cargo bench
-```
-
-## Testing
-
-```bash
-# Unit tests
-cargo test --lib
-
-# Integration tests
-cargo test --test integration_tests
-
-# CRS compatibility tests
-cargo test --test crs_compatibility
-
-# All tests
-cargo test
-```
+**Not wired in yet.** The source tree also contains modules for API security
+(GraphQL, JWT, JSON depth), bot detection, credential-stuffing protection,
+sensitive-data detection, threat intelligence, virtual patching, supply-chain
+checks, federated learning, an ML classifier and a plugin registry. In this
+version none of them runs on a request: they are either never called from the
+request path or switched off with no flag to enable them. Treat them as work in
+progress, not features. [`ROADMAP.md`](ROADMAP.md) has the plan.
 
 ## Development
 
 ```bash
-# Debug build with logging
-RUST_LOG=debug cargo run -- --socket /tmp/test.sock
-
-# Release build
-cargo build --release
-
-# Check formatting
-cargo fmt --check
-
-# Lint
-cargo clippy
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo bench            # Criterion benchmarks in benches/
 ```
 
-## Comparison with ModSecurity
+Building needs Rust 1.94.1+, `protoc`, and the zentinel checkout next to this
+one.
 
-| Feature | zentinel-agent-waf | ModSecurity CRS |
-|---------|-------------------|-----------------|
-| Detection Rules | 285 | 800+ |
-| Statistical Detection | ✓ | ✗ |
-| Anomaly Scoring | ✓ | ✓ |
-| API Security | ✓ (GraphQL, JWT) | Basic |
-| Bot Detection | ✓ (behavioral) | UA only |
-| Threat Intel | ✓ | ✗ |
-| Virtual Patching | ✓ | ✗ |
-| Dependencies | Pure Rust | C library |
-| Binary Size | ~6MB | ~50MB |
-| Latency p99 | <5ms | ~15ms |
+## Related
 
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Zentinel Proxy                           │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ Unix Socket
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  WAF Agent                                  │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  Automata   │  │  Statistical │  │    Threat Intel     │  │
-│  │   Engine    │  │  Classifier  │  │      Engine         │  │
-│  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘  │
-│         │                │                     │            │
-│         └────────────────┼─────────────────────┘            │
-│                          ▼                                  │
-│                 ┌─────────────────┐                         │
-│                 │ Anomaly Scorer  │                         │
-│                 └────────┬────────┘                         │
-│                          ▼                                  │
-│                 ┌─────────────────┐                         │
-│                 │    Decision     │ → Block / Allow / Log   │
-│                 └─────────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
-```
+- [Registry page](https://registry.zentinelproxy.io/waf/)
+- [zentinel-agent-zentinelsec](https://github.com/zentinelproxy/zentinel-agent-zentinelsec): OWASP CRS on a pure-Rust engine
+- [zentinel-agent-modsec](https://github.com/zentinelproxy/zentinel-agent-modsec): OWASP CRS on the C libmodsecurity
+- [Agent protocol v2](https://docs.zentinelproxy.io/agents/v2/)
+- [Zentinel](https://github.com/zentinelproxy/zentinel)
 
 ## License
 
-Apache-2.0
+Apache-2.0, see [`LICENSE`](LICENSE).
 
-## Contributing
+---
 
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Security
-
-Report security vulnerabilities to security@raskell.io.
+<p align="center">
+  <sub>Part of <a href="https://zentinelproxy.io">Zentinel</a>, the security-first reverse proxy. The shisa guards the gate.</sub>
+</p>
