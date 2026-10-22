@@ -69,7 +69,7 @@ pub struct WafConfig {
 
 /// Configuration for schema validation
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 #[derive(Default)]
 pub struct SchemaValidationConfig {
     /// Enable schema validation
@@ -88,7 +88,7 @@ pub struct SchemaValidationConfig {
 
 /// OpenAPI schema validation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct OpenApiValidationConfig {
     /// Enable OpenAPI validation
     #[serde(default)]
@@ -125,7 +125,7 @@ impl Default for OpenApiValidationConfig {
 
 /// GraphQL schema validation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct GraphQLSchemaValidationConfig {
     /// Enable GraphQL schema validation
     #[serde(default)]
@@ -162,7 +162,7 @@ impl Default for GraphQLSchemaValidationConfig {
 
 /// Schema enforcement configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SchemaEnforcementConfig {
     /// Default enforcement mode
     #[serde(default = "default_enforcement_mode")]
@@ -199,7 +199,7 @@ fn default_enforcement_mode() -> SchemaEnforcementMode {
 
 /// Configuration for WebSocket frame inspection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct WebSocketConfig {
     /// Enable WebSocket frame inspection
     #[serde(default)]
@@ -264,7 +264,7 @@ fn default_ws_close_reason() -> String {
 
 /// Configuration for API security inspection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ApiSecurityConfig {
     /// Enable GraphQL inspection
     #[serde(default)]
@@ -305,7 +305,7 @@ fn default_graphql_depth() -> usize {
 
 /// Configuration for bot detection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct BotDetectionConfig {
     /// Enable bot detection
     #[serde(default)]
@@ -342,7 +342,7 @@ fn default_min_interval() -> u64 {
 
 /// Configuration for credential stuffing protection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct CredentialProtectionConfig {
     /// Enable credential protection
     #[serde(default)]
@@ -397,7 +397,7 @@ fn default_login_paths() -> Vec<String> {
 
 /// Configuration for sensitive data detection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SensitiveDataDetectionConfig {
     /// Enable sensitive data detection in responses
     #[serde(default)]
@@ -432,7 +432,7 @@ impl Default for SensitiveDataDetectionConfig {
 
 /// Configuration for threat intelligence
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ThreatIntelConfig {
     /// Enable threat intelligence
     #[serde(default)]
@@ -469,7 +469,7 @@ fn default_intel_block_threshold() -> u8 {
 
 /// Configuration for virtual patching
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct VirtualPatchingConfig {
     /// Enable virtual patching
     #[serde(default = "default_true")]
@@ -494,7 +494,7 @@ impl Default for VirtualPatchingConfig {
 
 /// Configuration for supply chain protection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct SupplyChainConfig {
     /// Enable supply chain protection
     #[serde(default)]
@@ -523,7 +523,7 @@ impl Default for SupplyChainConfig {
 
 /// Configuration for metrics collection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct MetricsConfig {
     /// Enable metrics collection
     #[serde(default = "default_true")]
@@ -552,7 +552,7 @@ impl Default for MetricsConfig {
 /// using a sliding window with overlap to detect patterns that span chunks.
 /// This provides constant memory usage regardless of body size.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct StreamingConfig {
     /// Enable streaming mode (vs full buffering)
     #[serde(default)]
@@ -613,7 +613,7 @@ fn default_min_streaming_size() -> usize {
 /// variations that bypass regex patterns. Scores from ML detection
 /// contribute to the overall anomaly score.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct MlConfig {
     /// Enable ML-based attack classification
     #[serde(default)]
@@ -706,7 +706,7 @@ impl Default for WafConfig {
 
 /// Federated learning configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct FederatedConfig {
     /// Enable federated learning
     #[serde(default)]
@@ -763,7 +763,7 @@ fn default_privacy_epsilon() -> f64 {
 
 /// Scoring configuration for anomaly-based detection
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ScoringConfig {
     /// Enable scoring mode (vs binary block/allow)
     #[serde(default = "default_true")]
@@ -796,7 +796,7 @@ impl Default for ScoringConfig {
 
 /// Location-based score multipliers
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct LocationWeights {
     /// Path multiplier
     #[serde(default = "default_path_weight")]
@@ -858,7 +858,7 @@ impl LocationWeights {
 
 /// Rule management configuration
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RuleManagement {
     /// Explicitly enabled rules (if set, only these run)
     #[serde(default)]
@@ -917,7 +917,7 @@ impl RuleSelector {
 
 /// Rule override configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RuleOverride {
     /// Rules to override
     pub rules: Vec<RuleSelector>,
@@ -946,7 +946,7 @@ pub enum OverrideAction {
 
 /// Rule exclusion configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct RuleExclusion {
     /// Rules to exclude
     pub rules: Vec<RuleSelector>,
@@ -956,7 +956,7 @@ pub struct RuleExclusion {
 
 /// Conditions for rule exclusions
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ExclusionConditions {
     /// Path prefixes
     #[serde(default)]
@@ -976,8 +976,8 @@ pub struct ExclusionConditions {
 }
 
 /// JSON-serializable config for Configure events
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct WafConfigJson {
     #[serde(default = "default_paranoia")]
     pub paranoia_level: u8,
@@ -1108,6 +1108,43 @@ impl From<WafConfigJson> for WafConfig {
             websocket: json.websocket.unwrap_or_default(),
             // v0.9.0: Schema Validation
             schema_validation: json.schema_validation.unwrap_or_default(),
+        }
+    }
+}
+
+impl From<&WafConfig> for WafConfigJson {
+    /// The JSON form of an effective configuration.
+    ///
+    /// A Configure event is merged onto this, so it has to name every setting
+    /// `From<WafConfigJson> for WafConfig` reads back.
+    fn from(c: &WafConfig) -> Self {
+        WafConfigJson {
+            paranoia_level: c.paranoia_level,
+            sqli: c.sqli_enabled,
+            xss: c.xss_enabled,
+            path_traversal: c.path_traversal_enabled,
+            command_injection: c.command_injection_enabled,
+            protocol: c.protocol_enabled,
+            block_mode: c.block_mode,
+            exclude_paths: c.exclude_paths.clone(),
+            body_inspection: c.body_inspection_enabled,
+            max_body_size: c.max_body_size,
+            response_inspection: c.response_inspection_enabled,
+            scoring: Some(c.scoring.clone()),
+            rules: Some(c.rules.clone()),
+            streaming: Some(c.streaming.clone()),
+            ml: Some(c.ml.clone()),
+            api_security: Some(c.api_security.clone()),
+            bot_detection: Some(c.bot_detection.clone()),
+            credential_protection: Some(c.credential_protection.clone()),
+            sensitive_data: Some(c.sensitive_data.clone()),
+            threat_intel: Some(c.threat_intel.clone()),
+            virtual_patching: Some(c.virtual_patching.clone()),
+            supply_chain: Some(c.supply_chain.clone()),
+            metrics: Some(c.metrics.clone()),
+            federated: Some(c.federated.clone()),
+            websocket: Some(c.websocket.clone()),
+            schema_validation: Some(c.schema_validation.clone()),
         }
     }
 }

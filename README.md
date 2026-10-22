@@ -144,8 +144,9 @@ before it was published; 0.3.0 has the limitation above.
 
 ## Configuration
 
-The agent is configured with command-line flags or environment variables. A
-`config { }` block on the proxy's `agent` definition does not reach it.
+The agent is configured with command-line flags or environment variables,
+and, from Zentinel releases that include zentinelproxy/zentinel#603, with a
+`config { }` block on the proxy's `agent` definition.
 
 | Option | Environment | Default | Meaning |
 |---|---|---|---|
@@ -171,6 +172,48 @@ The agent is configured with command-line flags or environment variables. A
 The boolean options are switches: `--block-mode` cannot take a value, so
 `--block-mode false` is rejected. To turn one off, set the environment
 variable, e.g. `WAF_BLOCK_MODE=false`.
+
+### The `config { }` block
+
+The proxy sends the block on every connection it opens to the agent: once per
+pooled connection at startup and again on every reconnect. The agent applies
+it with these rules:
+
+- **Merge, don't replace.** The block is laid over the current settings (the
+  flags above at startup). A key the block leaves out keeps its value, and a
+  nested block such as `scoring { }` only changes the keys it names.
+- **Idempotent.** If the result is the configuration already active, compared
+  by a hash of its canonical JSON, nothing happens. When it differs, the engine
+  is rebuilt, but credential-stuffing counters, bot timing history and the
+  request fingerprint baseline carry over unless their own section
+  (`credential-protection`, `bot-detection`, `ml`) changed. Bodies being
+  inspected are never dropped.
+- **Strict.** An unknown or misspelled key, or a value of the wrong type,
+  rejects the configure: the agent answers `false`, logs the error and keeps
+  its current configuration. The proxy then does not use that connection.
+- **Never logged in full.** The log shows the config's hash and the names of
+  the keys that changed, not their values.
+
+Keys are the JSON names of the settings, in kebab-case: `paranoia-level`,
+`sqli`, `xss`, `path-traversal`, `command-injection`, `protocol`, `block-mode`,
+`exclude-paths`, `body-inspection`, `max-body-size`, `response-inspection`,
+and the sections `scoring`, `rules`, `streaming`, `ml`, `api-security`,
+`bot-detection`, `credential-protection`, `sensitive-data`, `threat-intel`,
+`virtual-patching`, `supply-chain`, `metrics`, `federated`, `websocket` and
+`schema-validation`. A list with one item may be written as a single value.
+
+```kdl
+agent "waf" type="waf" {
+    unix-socket "/tmp/zentinel-waf.sock"
+    config {
+        paranoia-level 2
+        exclude-paths "/health" "/metrics"
+        scoring {
+            block-threshold 30
+        }
+    }
+}
+```
 
 The rule categories SSTI, LDAP injection, XPath injection, SSRF and insecure
 deserialization are always loaded. Proxy-side agent options are in the
