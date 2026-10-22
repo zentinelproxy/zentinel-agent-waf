@@ -339,12 +339,17 @@ impl WafEngine {
     ) -> Vec<Detection> {
         let mut all_detections = Vec::new();
 
-        // Check path
-        all_detections.extend(self.check(path, "path"));
+        // The proxy hands the agent the URI exactly as the client sent it, so
+        // the path and query are still percent-encoded. Rules are written
+        // against decoded text (`\bUNION\b.*\bSELECT\b` cannot match
+        // `1%20UNION%20SELECT`), so each value is checked raw (for the rules
+        // that look for encoding tricks) and decoded, and a rule that matches
+        // both forms is counted once.
+        self.check_raw_and_decoded(path, "path", false, &mut all_detections);
 
-        // Check query string
+        // Check query string; `+` means a space in a query string.
         if let Some(q) = query {
-            all_detections.extend(self.check(q, "query"));
+            self.check_raw_and_decoded(q, "query", true, &mut all_detections);
         }
 
         // Check headers
@@ -356,6 +361,29 @@ impl WafEngine {
         }
 
         all_detections
+    }
+
+    /// Check `value` as sent and, if it differs, its URL-decoded form.
+    fn check_raw_and_decoded(
+        &self,
+        value: &str,
+        location: &str,
+        plus_is_space: bool,
+        out: &mut Vec<Detection>,
+    ) {
+        let raw = self.check(value, location);
+        let decoded = url_decode_fully(value, plus_is_space);
+        if decoded == value {
+            out.extend(raw);
+            return;
+        }
+        let mut seen: std::collections::HashSet<u32> = raw.iter().map(|d| d.rule_id).collect();
+        out.extend(raw);
+        for d in self.check(&decoded, location) {
+            if seen.insert(d.rule_id) {
+                out.push(d);
+            }
+        }
     }
 
     /// Check if path should be excluded from inspection
@@ -720,8 +748,90 @@ fn truncate_value(value: &str, max_len: usize) -> String {
     }
 }
 
+/// Percent-decode `input` once, treating `+` as a space when `plus_is_space`.
+///
+/// Malformed escapes are kept as they are, and bytes that do not form UTF-8
+/// are replaced, so the result is always something the rules can scan.
+fn url_decode(input: &str, plus_is_space: bool) -> String {
+    fn hex(b: u8) -> Option<u8> {
+        match b {
+            b'0'..=b'9' => Some(b - b'0'),
+            b'a'..=b'f' => Some(b - b'a' + 10),
+            b'A'..=b'F' => Some(b - b'A' + 10),
+            _ => None,
+        }
+    }
+    let bytes = input.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let b = bytes[i];
+        if b == b'%' && i + 2 < bytes.len() {
+            if let (Some(h), Some(l)) = (hex(bytes[i + 1]), hex(bytes[i + 2])) {
+                out.push((h << 4) | l);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(if plus_is_space && b == b'+' { b' ' } else { b });
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Decode until the value stops changing (at most three rounds), so that
+/// double-encoded payloads such as `%2527` are seen as `'`.
+fn url_decode_fully(input: &str, plus_is_space: bool) -> String {
+    let mut current = input.to_string();
+    for _ in 0..3 {
+        let next = url_decode(&current, plus_is_space);
+        if next == current {
+            break;
+        }
+        current = next;
+    }
+    current
+}
+
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn test_url_decode() {
+        assert_eq!(
+            url_decode("1%27%20OR%20%271%27%3D%271", true),
+            "1' OR '1'='1"
+        );
+        assert_eq!(url_decode("a+b", true), "a b");
+        assert_eq!(url_decode("a+b", false), "a+b");
+        assert_eq!(url_decode("100%", true), "100%");
+        assert_eq!(url_decode("%zz%4", true), "%zz%4");
+        assert_eq!(url_decode_fully("%2527", true), "'");
+    }
+
+    #[test]
+    fn test_encoded_query_sqli_is_detected() {
+        let engine = test_engine();
+        let headers = HashMap::new();
+        for q in [
+            "id=1%27%20OR%20%271%27%3D%271",
+            "id=1%20UNION%20SELECT%20username%2Cpassword%20FROM%20users",
+            "id=1+UNION+SELECT+username,password+FROM+users",
+        ] {
+            let detections = engine.check_request("/search", Some(q), &headers);
+            assert!(
+                detections
+                    .iter()
+                    .any(|d| d.attack_type == AttackType::SqlInjection),
+                "no SQLi detection for encoded query {q}"
+            );
+        }
+        let clean = engine.check_request("/search", Some("q=hello+world"), &headers);
+        assert!(
+            clean.is_empty(),
+            "clean query produced detections: {clean:?}"
+        );
+    }
     use super::*;
 
     fn test_engine() -> WafEngine {

@@ -1,6 +1,6 @@
 [package]
 name = "zentinel-agent-waf"
-version = "0.2.0"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.94.1"
 authors = ["Zentinel Contributors"]
@@ -23,8 +23,8 @@ path = "src/main.rs"
 
 [dependencies]
 # Zentinel protocol
-zentinel-agent-protocol = { path = "../zentinel/crates/agent-protocol" }
-zentinel-common = { path = "../zentinel/crates/common" }
+zentinel-agent-protocol = "0.6.50"
+zentinel-common = "0.6.50"
 
 # Async runtime
 tokio = { version = "1.40", features = ["full"] }

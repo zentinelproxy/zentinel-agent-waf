@@ -33,8 +33,6 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
       - uses: actions/checkout@v6
-      - name: Clone zentinel
-        run: git clone --depth 1 https://github.com/zentinelproxy/zentinel.git ../zentinel
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -63,8 +61,6 @@ jobs:
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
       - uses: actions/checkout@v6
-      - name: Clone zentinel
-        run: git clone --depth 1 https://github.com/zentinelproxy/zentinel.git ../zentinel
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/cache@v5
         with:
@@ -81,3 +77,38 @@ jobs:
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - run: cargo test --workspace
+
+  # Runs the release binary behind a real Zentinel and checks the v2
+  # handshake, an allowed request and blocked attacks. Same script as the
+  # release workflow, so a change that would break a release fails here first.
+  smoke:
+    name: Smoke test behind Zentinel
+    runs-on: ubuntu-latest
+    env:
+      ZENTINEL_RELEASE: "26.10_7"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-smoke-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-smoke-
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: cargo build --release --locked
+      - name: Download Zentinel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset="zentinel-${ZENTINEL_RELEASE}-linux-amd64.tar.gz"
+          mkdir -p "$RUNNER_TEMP/zentinel" && cd "$RUNNER_TEMP/zentinel"
+          gh release download "$ZENTINEL_RELEASE" --repo zentinelproxy/zentinel \
+            --pattern "$asset" --pattern "$asset.sha256"
+          shasum -a 256 -c "$asset.sha256"
+          tar xzf "$asset"
+      - run: scripts/smoke-test.sh target/release/zentinel-waf-agent "$RUNNER_TEMP/zentinel/zentinel"

@@ -32,10 +32,11 @@ use [zentinel-agent-zentinelsec](https://github.com/zentinelproxy/zentinel-agent
 (pure Rust) or [zentinel-agent-modsec](https://github.com/zentinelproxy/zentinel-agent-modsec)
 (C libmodsecurity) instead.
 
-> **Known limitation:** the released binary (0.3.0, which
-> `zentinel bundle install waf` also installs) does not speak the current agent
-> protocol: the proxy's handshake fails with `Invalid message format` and every
-> request gets a 503. Build from source until a new release ships.
+> **Known limitation:** release 0.3.0 (which `zentinel bundle install waf`
+> still installs) is an old pre-rename build that does not speak the current
+> agent protocol: the proxy's handshake fails with `Invalid message format`
+> and every request gets a 503. 0.4.0 fixes this; until it is released and the
+> bundle points at it, build from source.
 
 ## Quick start
 
@@ -112,22 +113,17 @@ curl -i -d "id=1' OR '1'='1" http://127.0.0.1:8080/                     # 403
 
 ## Install
 
-### From source (recommended for now)
+### From source (recommended until 0.4.0 is released)
 
-The crate takes `zentinel-agent-protocol` from a sibling checkout of
-[zentinel](https://github.com/zentinelproxy/zentinel) (a path dependency), so
-clone both side by side. Building needs `protoc`.
+Building needs `protoc`. The protocol crates come from crates.io, so no other
+checkout is needed.
 
 ```bash
-git clone https://github.com/zentinelproxy/zentinel
-git clone https://github.com/zentinelproxy/zentinel-agent-waf
-cd zentinel-agent-waf
-cargo build --release
-sudo install -m 0755 target/release/zentinel-waf-agent /usr/local/bin/
+cargo install --locked --git https://github.com/zentinelproxy/zentinel-agent-waf
 ```
 
-The path dependency is also why neither `cargo install zentinel-agent-waf` (it
-is not on crates.io) nor `cargo install --git` works.
+The crate is not on crates.io, so `cargo install zentinel-agent-waf` does not
+work.
 
 ### Bundle
 
@@ -135,14 +131,16 @@ is not on crates.io) nor `cargo install --git` works.
 zentinel bundle install waf
 ```
 
-Installs release 0.3.0, which does not work with the current proxy (see Known
+Installs the release pinned in the proxy's bundle lock. Until that is 0.4.0
+it is 0.3.0, which does not work with the current proxy (see Known
 limitation). See the [bundle documentation](https://docs.zentinelproxy.io/deployment/bundle/).
 
 ### Release binaries
 
-[Release 0.3.0](https://github.com/zentinelproxy/zentinel-agent-waf/releases/tag/v0.3.0)
-ships `linux-x86_64`, `linux-aarch64` and `darwin-aarch64`, with the same
-limitation.
+Each release ships `zentinel-waf-agent-<version>-<platform>.tar.gz` and a
+`.sha256` for `linux-x86_64`, `linux-aarch64` and `darwin-aarch64`. From 0.4.0
+on, every asset has passed `scripts/smoke-test.sh` behind a real Zentinel
+before it was published; 0.3.0 has the limitation above.
 
 ## Configuration
 
