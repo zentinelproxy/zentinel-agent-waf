@@ -26,6 +26,7 @@ pub mod api;
 pub mod automata;
 pub mod bot;
 pub mod config;
+pub mod configure;
 pub mod credential;
 pub mod detection;
 pub mod engine;
@@ -182,6 +183,15 @@ impl WafMetrics {
     }
 }
 
+/// What a Configure event did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConfigureOutcome {
+    /// The effective configuration is the one already active; nothing changed.
+    Unchanged,
+    /// A new configuration is active; `changed` names the keys that differ.
+    Applied { changed: Vec<String> },
+}
+
 /// WAF agent implementing the Zentinel agent protocol
 pub struct WafAgent {
     engine: Arc<RwLock<WafEngine>>,
@@ -207,10 +217,77 @@ impl WafAgent {
     }
 
     /// Reconfigure the WAF engine with new settings
+    ///
+    /// Runtime state of components whose settings are unchanged carries over.
     pub async fn reconfigure(&self, config: WafConfig) -> Result<()> {
-        let new_engine = WafEngine::new(config)?;
-        *self.engine.write().await = new_engine;
+        let mut new_engine = WafEngine::new(config)?;
+        let mut engine = self.engine.write().await;
+        new_engine.carry_state_from(&mut engine);
+        *engine = new_engine;
         Ok(())
+    }
+
+    /// Number of IPs credential protection is tracking (0 if unavailable).
+    pub async fn credential_tracked_ips(&self) -> usize {
+        self.engine
+            .read()
+            .await
+            .credential_stats()
+            .map(|s| s.tracked_ips)
+            .unwrap_or(0)
+    }
+
+    /// Records a login attempt with credential protection; true if blocked.
+    pub async fn check_credential_attempt(
+        &self,
+        path: &str,
+        ip: &str,
+        username: &str,
+        success: bool,
+    ) -> bool {
+        self.engine
+            .read()
+            .await
+            .check_credential_attempt(path, ip, username, success)
+            .0
+    }
+
+    /// Applies a Configure event from the proxy.
+    ///
+    /// - The block is merged onto the current settings (the CLI flags at
+    ///   startup): a key the block leaves out keeps its current value.
+    /// - A key the agent does not know, or a value of the wrong type, rejects
+    ///   the whole configure and the current settings stay in force.
+    /// - If the result equals the current settings, nothing happens; the
+    ///   proxy sends the same block on every connection.
+    /// - Otherwise a new engine is built and keeps the runtime state of each
+    ///   component whose settings did not change. Pending bodies are kept.
+    pub async fn apply_config(&self, config: &serde_json::Value) -> Result<ConfigureOutcome> {
+        if !config.is_object() {
+            anyhow::bail!("the configuration must be an object, got {config}");
+        }
+        let mut engine = self.engine.write().await;
+        let current = serde_json::to_value(WafConfigJson::from(&engine.config))?;
+        let mut merged = current.clone();
+        configure::merge(&mut merged, config);
+        let parsed: WafConfigJson = serde_json::from_value(merged)
+            .map_err(|e| anyhow::anyhow!("invalid WAF configuration: {e}"))?;
+        let new_config: WafConfig = parsed.into();
+        let effective = serde_json::to_value(WafConfigJson::from(&new_config))?;
+        if configure::config_hash(&effective) == configure::config_hash(&current) {
+            return Ok(ConfigureOutcome::Unchanged);
+        }
+        let changed = configure::changed_keys(&current, &effective);
+        let mut new_engine = WafEngine::new(new_config)?;
+        new_engine.carry_state_from(&mut engine);
+        *engine = new_engine;
+        Ok(ConfigureOutcome::Applied { changed })
+    }
+
+    /// The active configuration, in the JSON form a Configure event uses.
+    pub async fn active_config(&self) -> serde_json::Value {
+        serde_json::to_value(WafConfigJson::from(&self.engine.read().await.config))
+            .unwrap_or_default()
     }
 
     /// Health check for the WAF agent
@@ -492,37 +569,32 @@ impl AgentHandlerV2 for WafAgent {
     }
 
     /// Handle a configuration update from the proxy
+    ///
+    /// See [`WafAgent::apply_config`]. The config itself is never logged: it
+    /// can carry secrets. Its hash and the names of changed keys are.
     async fn on_configure(&self, config: serde_json::Value, version: Option<String>) -> bool {
-        info!(config_version = ?version, "Received configuration update");
-        debug!(config = ?config, "Configuration content");
-
-        // Parse the JSON config
-        let json_config: WafConfigJson =
-            match serde_json::from_value::<WafConfigJson>(config.clone()) {
-                Ok(c) => c,
-                Err(e) => {
-                    warn!(error = %e, "Failed to parse WAF configuration");
-                    return false;
-                }
-            };
-
-        // Convert to WafConfig and reconfigure
-        let new_config: WafConfig = json_config.into();
-        info!(
-            paranoia_level = new_config.paranoia_level,
-            sqli = new_config.sqli_enabled,
-            xss = new_config.xss_enabled,
-            block_mode = new_config.block_mode,
-            "Applying WAF configuration"
-        );
-
-        match self.reconfigure(new_config).await {
-            Ok(()) => {
-                info!("WAF agent reconfigured successfully");
+        let hash = configure::config_hash(&config);
+        match self.apply_config(&config).await {
+            Ok(ConfigureOutcome::Unchanged) => {
+                debug!(config_version = ?version, config_hash = %hash, "Configuration unchanged");
+                true
+            }
+            Ok(ConfigureOutcome::Applied { changed }) => {
+                info!(
+                    config_version = ?version,
+                    config_hash = %hash,
+                    changed_keys = ?changed,
+                    "WAF configuration applied"
+                );
                 true
             }
             Err(e) => {
-                warn!(error = %e, "Failed to reconfigure WAF engine");
+                warn!(
+                    config_version = ?version,
+                    config_hash = %hash,
+                    error = %e,
+                    "Rejected WAF configuration; keeping the current one"
+                );
                 false
             }
         }

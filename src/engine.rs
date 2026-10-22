@@ -163,6 +163,51 @@ impl WafEngine {
         })
     }
 
+    /// Takes over the runtime state `old` has built up, for every component
+    /// whose settings are the same in both engines.
+    ///
+    /// A reconfigure builds a new engine; without this, every Configure the
+    /// proxy sends (one per connection, again on every reconnect) would forget
+    /// the credential-stuffing counters, bot timing history and request
+    /// fingerprint baseline, and an attacker could reset them by making the
+    /// proxy reconnect. A component whose settings changed starts fresh.
+    pub fn carry_state_from(&mut self, old: &mut WafEngine) {
+        fn same<T: serde::Serialize>(a: &T, b: &T) -> bool {
+            matches!(
+                (serde_json::to_value(a), serde_json::to_value(b)),
+                (Ok(x), Ok(y)) if x == y
+            )
+        }
+        fn swap<T>(new: &mut RwLock<T>, old: &mut RwLock<T>) {
+            if let (Ok(n), Ok(o)) = (new.get_mut(), old.get_mut()) {
+                std::mem::swap(n, o);
+            }
+        }
+        if same(
+            &self.config.credential_protection,
+            &old.config.credential_protection,
+        ) {
+            swap(
+                &mut self.credential_protection,
+                &mut old.credential_protection,
+            );
+        }
+        if same(&self.config.bot_detection, &old.config.bot_detection) {
+            swap(&mut self.bot_detector, &mut old.bot_detector);
+        }
+        if same(&self.config.ml, &old.config.ml) {
+            swap(
+                &mut self.fingerprint_baseline,
+                &mut old.fingerprint_baseline,
+            );
+        }
+    }
+
+    /// Number of IPs and usernames credential protection is tracking.
+    pub fn credential_stats(&self) -> Option<crate::credential::CredentialStats> {
+        self.credential_protection.read().ok().map(|p| p.stats())
+    }
+
     /// Get all active rules
     pub fn rules(&self) -> &[Rule] {
         &self.rules

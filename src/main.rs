@@ -270,11 +270,13 @@ async fn main() -> Result<()> {
 
     // Initialize tracing
     let log_level = if args.verbose { "debug" } else { "info" };
+    // The library logs under its own target (`zentinel_agent_waf`), which
+    // the binary's crate name (`zentinel_waf_agent`) does not cover.
     tracing_subscriber::fmt()
         .with_env_filter(format!(
-            "{}={},zentinel_agent_protocol=info",
+            "{}={level},zentinel_agent_waf={level},zentinel_agent_protocol=info",
             env!("CARGO_CRATE_NAME"),
-            log_level
+            level = log_level
         ))
         .json()
         .init();
