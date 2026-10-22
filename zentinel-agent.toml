@@ -6,7 +6,7 @@ name = "zentinel-agent-waf"
 version = "0.1.0"
 description = "Web Application Firewall agent for Zentinel reverse proxy - SQL injection, XSS, and attack detection"
 authors = ["Zentinel Contributors"]
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 repository = "https://github.com/zentinelproxy/zentinel-agent-waf"
 
 [protocol]
