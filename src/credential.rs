@@ -108,12 +108,14 @@ impl IpTracker {
         }
     }
 
-    fn record_attempt(&mut self, username: &str, success: bool) {
+    fn record_attempt(&mut self, username: Option<&str>, success: bool) {
         self.last_attempt = Instant::now();
         if !success {
             self.failure_count += 1;
         }
-        *self.usernames.entry(username.to_string()).or_insert(0) += 1;
+        if let Some(username) = username {
+            *self.usernames.entry(username.to_string()).or_insert(0) += 1;
+        }
     }
 
     fn reset(&mut self) {
@@ -196,13 +198,73 @@ impl CredentialProtection {
         }
     }
 
-    /// Check if a path is a login endpoint
+    /// Check if a path is a login endpoint: one of `login_paths`, or below
+    /// one (`/login/sso`), ignoring case and any query string. `/auth` does not
+    /// match `/authors`.
     pub fn is_login_path(&self, path: &str) -> bool {
+        let path = path.split(['?', '#']).next().unwrap_or(path);
         let path_lower = path.to_lowercase();
-        self.config
-            .login_paths
-            .iter()
-            .any(|p| path_lower.starts_with(p))
+        self.config.login_paths.iter().any(|p| {
+            let p = p.to_lowercase();
+            let p = p.trim_end_matches('/');
+            match path_lower.strip_prefix(p) {
+                Some(rest) => rest.is_empty() || rest.starts_with('/'),
+                None => false,
+            }
+        })
+    }
+
+    /// Whether a new login attempt from `ip` (for `username`, when known)
+    /// must be refused before it reaches the application, because the client
+    /// or the account has already used up its failures for the window.
+    ///
+    /// Reads the counters without recording anything: the attempt is recorded
+    /// by [`Self::record_attempt`] once its outcome (the response status) is
+    /// known.
+    pub fn precheck(
+        &self,
+        ip: &str,
+        username: Option<&str>,
+    ) -> (CredentialDecision, Vec<Detection>) {
+        if !self.config.velocity_detection {
+            return (CredentialDecision::Allow, Vec::new());
+        }
+        let window = Duration::from_secs(self.config.window_secs);
+
+        let ip_failures = self
+            .ip_trackers
+            .get(ip)
+            .filter(|t| !t.is_expired(window))
+            .map_or(0, |t| t.failure_count);
+        if ip_failures >= self.config.max_failures_per_ip {
+            return (
+                CredentialDecision::RateLimited {
+                    reason: format!("Too many failed attempts from IP ({ip_failures})"),
+                },
+                vec![ip_rate_limit_detection(ip, self.config.max_failures_per_ip)],
+            );
+        }
+
+        if let Some(username) = username {
+            let user_failures = self
+                .user_trackers
+                .get(username)
+                .filter(|t| !t.is_expired(window))
+                .map_or(0, |t| t.failure_count);
+            if user_failures >= self.config.max_failures_per_user {
+                return (
+                    CredentialDecision::RateLimited {
+                        reason: format!("Too many failed attempts for user ({user_failures})"),
+                    },
+                    vec![user_rate_limit_detection(
+                        username,
+                        self.config.max_failures_per_user,
+                    )],
+                );
+            }
+        }
+
+        (CredentialDecision::Allow, Vec::new())
     }
 
     /// Record a login attempt and check for attacks
@@ -210,6 +272,17 @@ impl CredentialProtection {
         &mut self,
         ip: &str,
         username: &str,
+        success: bool,
+    ) -> (CredentialDecision, Vec<Detection>) {
+        self.record_attempt(ip, Some(username), success)
+    }
+
+    /// Record a login attempt whose username may be unknown (`None`: only the
+    /// client's counters are updated), and check for attacks.
+    pub fn record_attempt(
+        &mut self,
+        ip: &str,
+        username: Option<&str>,
         success: bool,
     ) -> (CredentialDecision, Vec<Detection>) {
         let window = Duration::from_secs(self.config.window_secs);
@@ -235,37 +308,26 @@ impl CredentialProtection {
         // Record the attempt
         ip_tracker.record_attempt(username, success);
 
-        // Get or create user tracker
-        let user_tracker = self
-            .user_trackers
-            .entry(username.to_string())
-            .or_insert_with(UserTracker::new);
-
-        // Reset if window expired
-        if user_tracker.is_expired(window) {
-            user_tracker.reset();
-        }
-
-        // Record the attempt
-        user_tracker.record_attempt(ip, success);
+        // Get or create user tracker (only when the username is known)
+        let mut user_tracker = username.map(|username| {
+            let tracker = self
+                .user_trackers
+                .entry(username.to_string())
+                .or_insert_with(UserTracker::new);
+            if tracker.is_expired(window) {
+                tracker.reset();
+            }
+            tracker.record_attempt(ip, success);
+            tracker
+        });
+        let username_or_unknown = username.unwrap_or("");
 
         // Check velocity per IP
         if self.config.velocity_detection
             && !success
             && ip_tracker.failure_count > self.config.max_failures_per_ip
         {
-            detections.push(Detection {
-                rule_id: 96001,
-                rule_name: "Credential Stuffing: IP Rate Limit".to_string(),
-                attack_type: AttackType::ProtocolAttack,
-                matched_value: format!(
-                    "IP {} exceeded {} failures",
-                    ip, self.config.max_failures_per_ip
-                ),
-                location: "login".to_string(),
-                base_score: 7,
-                tags: vec!["credential-stuffing".to_string(), "rate-limit".to_string()],
-            });
+            detections.push(ip_rate_limit_detection(ip, self.config.max_failures_per_ip));
 
             return (
                 CredentialDecision::RateLimited {
@@ -279,36 +341,26 @@ impl CredentialProtection {
         }
 
         // Check velocity per username
-        if self.config.velocity_detection
-            && !success
-            && user_tracker.failure_count > self.config.max_failures_per_user
-        {
-            detections.push(Detection {
-                rule_id: 96002,
-                rule_name: "Credential Stuffing: User Rate Limit".to_string(),
-                attack_type: AttackType::ProtocolAttack,
-                matched_value: format!(
-                    "User {} exceeded {} failures",
-                    mask_username(username),
-                    self.config.max_failures_per_user
-                ),
-                location: "login".to_string(),
-                base_score: 6,
-                tags: vec![
-                    "credential-stuffing".to_string(),
-                    "user-rate-limit".to_string(),
-                ],
-            });
+        if let Some(user_tracker) = user_tracker.as_deref_mut() {
+            if self.config.velocity_detection
+                && !success
+                && user_tracker.failure_count > self.config.max_failures_per_user
+            {
+                detections.push(user_rate_limit_detection(
+                    username_or_unknown,
+                    self.config.max_failures_per_user,
+                ));
 
-            return (
-                CredentialDecision::RateLimited {
-                    reason: format!(
-                        "Too many failed attempts for user ({})",
-                        user_tracker.failure_count
-                    ),
-                },
-                detections,
-            );
+                return (
+                    CredentialDecision::RateLimited {
+                        reason: format!(
+                            "Too many failed attempts for user ({})",
+                            user_tracker.failure_count
+                        ),
+                    },
+                    detections,
+                );
+            }
         }
 
         // Check account enumeration (many usernames from one IP)
@@ -342,9 +394,8 @@ impl CredentialProtection {
         }
 
         // Check distributed attack (one username from many IPs)
-        if self.config.distributed_detection
-            && !success
-            && user_tracker.ips.len() > self.config.max_ips_per_user
+        let user_ips = user_tracker.as_deref().map_or(0, |t| t.ips.len());
+        if self.config.distributed_detection && !success && user_ips > self.config.max_ips_per_user
         {
             detections.push(Detection {
                 rule_id: 96004,
@@ -352,8 +403,8 @@ impl CredentialProtection {
                 attack_type: AttackType::ProtocolAttack,
                 matched_value: format!(
                     "User {} attacked from {} IPs",
-                    mask_username(username),
-                    user_tracker.ips.len()
+                    mask_username(username_or_unknown),
+                    user_ips
                 ),
                 location: "login".to_string(),
                 base_score: 9,
@@ -362,10 +413,7 @@ impl CredentialProtection {
 
             return (
                 CredentialDecision::DistributedAttack {
-                    reason: format!(
-                        "Distributed attack: {} IPs targeting user",
-                        user_tracker.ips.len()
-                    ),
+                    reason: format!("Distributed attack: {} IPs targeting user", user_ips),
                 },
                 detections,
             );
@@ -407,12 +455,93 @@ pub struct CredentialStats {
     pub tracked_users: usize,
 }
 
+/// The username a login body names: the first of `fields` present as a
+/// top-level string in a JSON object, or as an `application/x-www-form-urlencoded`
+/// field. Empty values and values over 256 bytes are ignored.
+pub fn extract_username(body: &[u8], fields: &[String]) -> Option<String> {
+    const MAX_LEN: usize = 256;
+    let usable = |v: String| (!v.is_empty() && v.len() <= MAX_LEN).then_some(v);
+
+    if let Ok(serde_json::Value::Object(map)) = serde_json::from_slice::<serde_json::Value>(body) {
+        return fields.iter().find_map(|f| {
+            map.iter()
+                .find(|(k, _)| k.eq_ignore_ascii_case(f))
+                .and_then(|(_, v)| v.as_str())
+                .and_then(|v| usable(v.to_string()))
+        });
+    }
+
+    let body = std::str::from_utf8(body).ok()?;
+    let pairs: Vec<(String, String)> = body
+        .split('&')
+        .filter_map(|pair| {
+            let (k, v) = pair.split_once('=')?;
+            Some((form_decode(k)?, form_decode(v)?))
+        })
+        .collect();
+    fields.iter().find_map(|f| {
+        pairs
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(f))
+            .and_then(|(_, v)| usable(v.clone()))
+    })
+}
+
+/// Decode one `application/x-www-form-urlencoded` component.
+fn form_decode(s: &str) -> Option<String> {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'+' => out.push(b' '),
+            b'%' => {
+                let hex = s.get(i + 1..i + 3)?;
+                out.push(u8::from_str_radix(hex, 16).ok()?);
+                i += 2;
+            }
+            b => out.push(b),
+        }
+        i += 1;
+    }
+    String::from_utf8(out).ok()
+}
+
+fn ip_rate_limit_detection(ip: &str, max: usize) -> Detection {
+    Detection {
+        rule_id: 96001,
+        rule_name: "Credential Stuffing: IP Rate Limit".to_string(),
+        attack_type: AttackType::ProtocolAttack,
+        matched_value: format!("IP {} exceeded {} failures", ip, max),
+        location: "login".to_string(),
+        base_score: 7,
+        tags: vec!["credential-stuffing".to_string(), "rate-limit".to_string()],
+    }
+}
+
+fn user_rate_limit_detection(username: &str, max: usize) -> Detection {
+    Detection {
+        rule_id: 96002,
+        rule_name: "Credential Stuffing: User Rate Limit".to_string(),
+        attack_type: AttackType::ProtocolAttack,
+        matched_value: format!("User {} exceeded {} failures", mask_username(username), max),
+        location: "login".to_string(),
+        base_score: 6,
+        tags: vec![
+            "credential-stuffing".to_string(),
+            "user-rate-limit".to_string(),
+        ],
+    }
+}
+
 /// Mask a username for logging (privacy)
 fn mask_username(username: &str) -> String {
-    if username.len() <= 3 {
+    // By characters: the username comes from the request body, and a byte
+    // slice would panic inside a multi-byte character.
+    if username.chars().count() <= 3 {
         return "***".to_string();
     }
-    format!("{}***", &username[..2])
+    format!("{}***", username.chars().take(2).collect::<String>())
 }
 
 #[cfg(test)]
@@ -537,9 +666,71 @@ mod tests {
     }
 
     #[test]
+    fn test_login_path_is_a_path_segment_match() {
+        let protection = CredentialProtection::default();
+        assert!(protection.is_login_path("/auth"));
+        assert!(protection.is_login_path("/auth/callback"));
+        assert!(protection.is_login_path("/LOGIN?next=/"));
+        assert!(!protection.is_login_path("/authors/42"));
+        assert!(!protection.is_login_path("/loginhistory"));
+    }
+
+    #[test]
+    fn test_precheck_reads_without_recording() {
+        let config = CredentialConfig {
+            max_failures_per_ip: 2,
+            max_failures_per_user: 100,
+            ..Default::default()
+        };
+        let mut protection = CredentialProtection::new(config);
+        assert_eq!(
+            protection.precheck("10.0.0.1", None).0,
+            CredentialDecision::Allow
+        );
+        assert_eq!(
+            protection.stats().tracked_ips,
+            0,
+            "precheck records nothing"
+        );
+        protection.record_attempt("10.0.0.1", None, false);
+        protection.record_attempt("10.0.0.1", None, false);
+        assert!(protection.precheck("10.0.0.1", None).0.is_blocked());
+        assert!(!protection.precheck("10.0.0.2", None).0.is_blocked());
+        assert_eq!(
+            protection.stats().tracked_users,
+            0,
+            "an unknown username is not tracked as a user"
+        );
+    }
+
+    #[test]
+    fn test_extract_username() {
+        let fields: Vec<String> = ["username", "email"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            extract_username(b"username=alice&password=x", &fields).as_deref(),
+            Some("alice")
+        );
+        assert_eq!(
+            extract_username(b"password=x&email=bob%40example.com", &fields).as_deref(),
+            Some("bob@example.com")
+        );
+        assert_eq!(
+            extract_username(br#"{"Username": "carol", "password": "x"}"#, &fields).as_deref(),
+            Some("carol")
+        );
+        assert_eq!(extract_username(b"password=x", &fields), None);
+        assert_eq!(extract_username(b"username=&password=x", &fields), None);
+        assert_eq!(extract_username(br#"{"username": 7}"#, &fields), None);
+    }
+
+    #[test]
     fn test_username_masking() {
         assert_eq!(mask_username("ab"), "***");
         assert_eq!(mask_username("admin"), "ad***");
         assert_eq!(mask_username("john.doe@example.com"), "jo***");
+        assert_eq!(mask_username("€uro-user"), "€u***");
     }
 }

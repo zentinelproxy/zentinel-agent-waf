@@ -617,13 +617,73 @@ impl WafEngine {
         if decision.is_blocked() {
             debug!(
                 ip = ip,
-                username_masked = &username[..username.len().min(2)],
+                username_masked = %username.chars().take(2).collect::<String>(),
                 decision = ?decision,
                 "Credential protection triggered"
             );
         }
 
         (decision.is_blocked(), detections)
+    }
+
+    /// Whether a request is a login attempt that credential protection
+    /// tracks: protection is enabled, the method is a login method and the
+    /// path is a login path.
+    pub fn is_login_request(&self, method: &str, path: &str) -> bool {
+        let config = &self.config.credential_protection;
+        if !config.enabled
+            || !config
+                .login_methods
+                .iter()
+                .any(|m| m.eq_ignore_ascii_case(method))
+        {
+            return false;
+        }
+        self.credential_protection
+            .read()
+            .map(|p| p.is_login_path(path))
+            .unwrap_or(false)
+    }
+
+    /// Before a login attempt reaches the application: the detections that
+    /// refuse it (the client or the account has no failures left in the
+    /// window), or an empty list to let it through. Records nothing.
+    pub fn credential_precheck(&self, ip: &str, username: Option<&str>) -> Vec<Detection> {
+        if !self.config.credential_protection.enabled {
+            return Vec::new();
+        }
+        match self.credential_protection.read() {
+            Ok(protection) => protection.precheck(ip, username).1,
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// After a login attempt: record its outcome from the response status.
+    /// Returns any detections the attempt triggered (for logging).
+    pub fn record_credential_outcome(
+        &self,
+        ip: &str,
+        username: Option<&str>,
+        status: u16,
+    ) -> Vec<Detection> {
+        let config = &self.config.credential_protection;
+        if !config.enabled {
+            return Vec::new();
+        }
+        let success = !config.failure_statuses.contains(&status);
+        match self.credential_protection.write() {
+            Ok(mut protection) => protection.record_attempt(ip, username, success).1,
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// The username a login body names: the first of the configured
+    /// `username-fields` found as a top-level JSON string or a form field.
+    pub fn login_username(&self, body: &[u8]) -> Option<String> {
+        crate::credential::extract_username(
+            body,
+            &self.config.credential_protection.username_fields,
+        )
     }
 
     /// Check response body for sensitive data leakage

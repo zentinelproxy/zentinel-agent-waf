@@ -251,9 +251,23 @@ The agent also reports request, block and detection counters to the proxy
 through the agent protocol's metrics report; it serves no HTTP endpoint of its
 own.
 
+**Credential-stuffing protection** (off by default; enable with
+`credential-protection { enabled true }` in the agent's `config { }` block).
+A request whose method is in `login-methods` (default `POST`) to one of
+`login-paths` (default `/login`, `/signin`, `/auth`, `/api/login`,
+`/api/auth`, and paths below them) is a login attempt. Its response status
+decides whether it failed (`failure-statuses`, default `401` and `403`). The
+username is read from the request body (`username-fields`, default
+`username`, `user`, `email`, `login`, as form or top-level JSON fields) when
+the body is inspected in buffered mode. Once a client has
+`max-failures-per-ip` failures (default 10), or an account has
+`max-failures-per-user` (default 5), within `window-secs` (default 300), further
+login attempts get `429 Too Many Requests` with `Retry-After` (in detect-only
+mode they pass, marked `X-WAF-Detected`). The agent declares `response_headers`
+for this; the proxy must send it response events.
+
 **Not wired in yet.** The source tree also contains modules for API security
-(GraphQL, JWT, JSON depth), bot detection, credential-stuffing protection,
-sensitive-data detection, threat intelligence, virtual patching, supply-chain
+(GraphQL, JWT, JSON depth), bot detection, sensitive-data detection, threat intelligence, virtual patching, supply-chain
 checks, federated learning, an ML classifier and a plugin registry. In this
 version none of them runs on a request: they are either never called from the
 request path or switched off with no flag to enable them. Treat them as work in
