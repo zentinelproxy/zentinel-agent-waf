@@ -116,6 +116,24 @@ impl WebSocketMessageAccumulator {
     }
 }
 
+/// A login attempt waiting for its response, which says whether it failed.
+#[derive(Debug)]
+struct PendingLogin {
+    client_ip: String,
+    /// From the request body, when it names one (buffered body inspection).
+    username: Option<String>,
+    started: std::time::Instant,
+}
+
+/// Most login attempts tracked while waiting for their responses. Beyond
+/// this, further attempts are still prechecked but their outcome is not
+/// recorded until some complete.
+const PENDING_LOGINS_MAX: usize = 10_000;
+
+/// A login whose response has not arrived after this long is forgotten (the
+/// proxy sends no response event for a request another agent blocked).
+const PENDING_LOGIN_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(120);
+
 /// Key for tracking WebSocket messages (per connection + direction)
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 struct WebSocketKey {
@@ -199,6 +217,9 @@ pub struct WafAgent {
     pending_response_bodies: Arc<RwLock<HashMap<String, BodyAccumulator>>>,
     /// WebSocket message accumulators for fragmented messages
     pending_websocket_messages: Arc<RwLock<HashMap<WebSocketKey, WebSocketMessageAccumulator>>>,
+    /// Login attempts waiting for their response status (credential
+    /// protection), by correlation ID
+    pending_logins: Arc<RwLock<HashMap<String, PendingLogin>>>,
     /// Metrics counters for v2 protocol reporting
     metrics: Arc<WafMetrics>,
 }
@@ -212,6 +233,7 @@ impl WafAgent {
             pending_request_bodies: Arc::new(RwLock::new(HashMap::new())),
             pending_response_bodies: Arc::new(RwLock::new(HashMap::new())),
             pending_websocket_messages: Arc::new(RwLock::new(HashMap::new())),
+            pending_logins: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(WafMetrics::default()),
         })
     }
@@ -398,6 +420,123 @@ impl WafAgent {
         }
 
         (decision, detections)
+    }
+
+    /// The response for a login attempt credential protection refuses: 429
+    /// in block mode, an allow marked `X-WAF-Detected` in detect-only mode.
+    fn credential_response(
+        &self,
+        engine: &WafEngine,
+        detections: &[Detection],
+        client_ip: &str,
+    ) -> AgentResponse {
+        let rule_ids: Vec<String> = detections.iter().map(|d| d.rule_id.to_string()).collect();
+        for detection in detections {
+            self.metrics.increment_detection(&detection.attack_type);
+        }
+        let audit = |outcome: &str| AuditMetadata {
+            tags: vec![
+                "waf".to_string(),
+                "credential-stuffing".to_string(),
+                outcome.to_string(),
+            ],
+            rule_ids: rule_ids.clone(),
+            reason_codes: detections.iter().map(|d| d.matched_value.clone()).collect(),
+            ..Default::default()
+        };
+        if engine.config.block_mode {
+            self.metrics.blocks_total.fetch_add(1, Ordering::Relaxed);
+            warn!(
+                client_ip = client_ip,
+                rules = %rule_ids.join(","),
+                "Login attempt refused by credential protection"
+            );
+            AgentResponse::block(429, Some("Too Many Requests".to_string()))
+                .add_response_header(HeaderOp::Set {
+                    name: "X-WAF-Blocked".to_string(),
+                    value: "true".to_string(),
+                })
+                .add_response_header(HeaderOp::Set {
+                    name: "X-WAF-Rule".to_string(),
+                    value: rule_ids.first().cloned().unwrap_or_default(),
+                })
+                .add_response_header(HeaderOp::Set {
+                    name: "Retry-After".to_string(),
+                    value: engine.config.credential_protection.window_secs.to_string(),
+                })
+                .with_audit(audit("blocked"))
+        } else {
+            warn!(
+                client_ip = client_ip,
+                rules = %rule_ids.join(","),
+                "Login attempt over the credential-protection limit (detect-only)"
+            );
+            AgentResponse::default_allow()
+                .add_request_header(HeaderOp::Set {
+                    name: "X-WAF-Detected".to_string(),
+                    value: rule_ids.join(","),
+                })
+                .with_audit(audit("detected"))
+        }
+    }
+
+    /// Credential protection for a request's headers: refuse a login attempt
+    /// the client has no failures left for, or remember it until its
+    /// response says whether it failed. `None` lets the request continue.
+    async fn credential_on_request(
+        &self,
+        engine: &WafEngine,
+        event: &RequestHeadersEvent,
+        path_only: &str,
+    ) -> Option<AgentResponse> {
+        if !engine.is_login_request(&event.method, path_only) {
+            return None;
+        }
+        let client_ip = &event.metadata.client_ip;
+        let detections = engine.credential_precheck(client_ip, None);
+        if !detections.is_empty() {
+            return Some(self.credential_response(engine, &detections, client_ip));
+        }
+
+        let now = std::time::Instant::now();
+        let mut pending = self.pending_logins.write().await;
+        if pending.len() >= PENDING_LOGINS_MAX {
+            pending.retain(|_, login| now.duration_since(login.started) <= PENDING_LOGIN_MAX_AGE);
+        }
+        if pending.len() < PENDING_LOGINS_MAX {
+            pending.insert(
+                event.metadata.correlation_id.clone(),
+                PendingLogin {
+                    client_ip: client_ip.clone(),
+                    username: None,
+                    started: now,
+                },
+            );
+        } else {
+            warn!("Too many login attempts in flight; not recording this one's outcome");
+        }
+        None
+    }
+
+    /// Credential protection for a login's full body: note the username and
+    /// refuse the attempt if that account has no failures left.
+    async fn credential_on_body(
+        &self,
+        engine: &WafEngine,
+        correlation_id: &str,
+        body: &[u8],
+    ) -> Option<AgentResponse> {
+        let mut pending = self.pending_logins.write().await;
+        let login = pending.get_mut(correlation_id)?;
+        let username = engine.login_username(body)?;
+        let detections = engine.credential_precheck(&login.client_ip, Some(&username));
+        if !detections.is_empty() {
+            let login = pending.remove(correlation_id)?;
+            drop(pending);
+            return Some(self.credential_response(engine, &detections, &login.client_ip));
+        }
+        login.username = Some(username);
+        None
     }
 
     /// Build response based on decision
@@ -644,10 +783,41 @@ impl AgentHandlerV2 for WafAgent {
         let detections = engine.check_request(path_only, query, &event.headers);
 
         let (decision, detections) = self.make_decision(&engine, detections, "headers");
+        if decision.is_block() {
+            return self.build_response(decision, &detections, vec!["waf".to_string()]);
+        }
+
+        // Credential-stuffing protection for login attempts
+        if let Some(response) = self.credential_on_request(&engine, &event, path_only).await {
+            return response;
+        }
+
         self.build_response(decision, &detections, vec!["waf".to_string()])
     }
 
-    async fn on_response_headers(&self, _event: ResponseHeadersEvent) -> AgentResponse {
+    async fn on_response_headers(&self, event: ResponseHeadersEvent) -> AgentResponse {
+        // The response to a login attempt says whether it failed.
+        let login = self
+            .pending_logins
+            .write()
+            .await
+            .remove(&event.correlation_id);
+        if let Some(login) = login {
+            let engine = self.engine.read().await;
+            let detections = engine.record_credential_outcome(
+                &login.client_ip,
+                login.username.as_deref(),
+                event.status,
+            );
+            for detection in &detections {
+                warn!(
+                    rule_id = detection.rule_id,
+                    rule_name = %detection.rule_name,
+                    client_ip = %login.client_ip,
+                    "Credential-stuffing detection"
+                );
+            }
+        }
         AgentResponse::default_allow()
     }
 
@@ -717,6 +887,15 @@ impl AgentHandlerV2 for WafAgent {
                         let detections = engine.check(&body_str, "body");
                         let (decision, detections) =
                             self.make_decision(&engine, detections, "body");
+                        if !decision.is_block() {
+                            drop(pending);
+                            if let Some(response) = self
+                                .credential_on_body(&engine, &event.correlation_id, &body_data.data)
+                                .await
+                            {
+                                return response;
+                            }
+                        }
                         return self.build_response(
                             decision,
                             &detections,
@@ -1155,6 +1334,47 @@ impl AgentHandlerV2 for WafAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A login waits for its response and is released by it, so tracking
+    /// outcomes costs memory per login in flight, not per login ever seen.
+    #[tokio::test]
+    async fn pending_login_is_released_by_its_response() {
+        let mut config = WafConfig::default();
+        config.credential_protection.enabled = true;
+        let agent = WafAgent::new(config).unwrap();
+        for i in 0..100 {
+            let id = format!("login-{i}");
+            let event = RequestHeadersEvent {
+                metadata: zentinel_agent_protocol::RequestMetadata {
+                    correlation_id: id.clone(),
+                    request_id: id.clone(),
+                    client_ip: "192.0.2.1".to_string(),
+                    client_port: 1,
+                    server_name: None,
+                    protocol: "HTTP/1.1".to_string(),
+                    tls_version: None,
+                    tls_cipher: None,
+                    route_id: None,
+                    upstream_id: None,
+                    timestamp: "2026-01-01T00:00:00Z".to_string(),
+                    traceparent: None,
+                },
+                method: "POST".to_string(),
+                uri: "/login".to_string(),
+                headers: HashMap::new(),
+            };
+            agent.on_request_headers(event).await;
+            assert_eq!(agent.pending_logins.read().await.len(), 1);
+            agent
+                .on_response_headers(ResponseHeadersEvent {
+                    correlation_id: id,
+                    status: 200,
+                    headers: HashMap::new(),
+                })
+                .await;
+            assert_eq!(agent.pending_logins.read().await.len(), 0);
+        }
+    }
 
     fn test_engine() -> WafEngine {
         let config = WafConfig {

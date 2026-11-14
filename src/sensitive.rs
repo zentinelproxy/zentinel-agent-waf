@@ -556,11 +556,7 @@ fn is_valid_ssn(digits: &str) -> bool {
 
     // Serial number (last 4 digits) cannot be 0000
     let serial: u32 = digits[5..9].parse().unwrap_or(0);
-    if serial == 0 {
-        return false;
-    }
-
-    true
+    serial != 0
 }
 
 /// Mask credit card number for logging

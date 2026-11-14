@@ -356,9 +356,19 @@ pub struct CredentialProtectionConfig {
     /// Time window in seconds
     #[serde(default = "default_credential_window")]
     pub window_secs: u64,
-    /// Login endpoint paths
+    /// Login endpoint paths (a request to one of these, or below one, is a
+    /// login attempt when its method is in `login_methods`)
     #[serde(default = "default_login_paths")]
     pub login_paths: Vec<String>,
+    /// HTTP methods that submit a login
+    #[serde(default = "default_login_methods")]
+    pub login_methods: Vec<String>,
+    /// Response statuses that mean the login failed
+    #[serde(default = "default_failure_statuses")]
+    pub failure_statuses: Vec<u16>,
+    /// Body fields (form or top-level JSON) holding the username
+    #[serde(default = "default_username_fields")]
+    pub username_fields: Vec<String>,
 }
 
 impl Default for CredentialProtectionConfig {
@@ -369,8 +379,26 @@ impl Default for CredentialProtectionConfig {
             max_failures_per_user: 5,
             window_secs: 300,
             login_paths: default_login_paths(),
+            login_methods: default_login_methods(),
+            failure_statuses: default_failure_statuses(),
+            username_fields: default_username_fields(),
         }
     }
+}
+
+fn default_login_methods() -> Vec<String> {
+    vec!["POST".to_string()]
+}
+
+fn default_failure_statuses() -> Vec<u16> {
+    vec![401, 403]
+}
+
+fn default_username_fields() -> Vec<String> {
+    ["username", "user", "email", "login"]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 fn default_max_failures_per_ip() -> usize {
